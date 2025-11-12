@@ -87,70 +87,70 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 
 	// Seva Automation Endpoints
 	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva",
-		bundle.SevaHandler.HandleSendSeva(domain.SevaTypeEkadashiBhagavat))
+		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeEkadashiBhagavat)))
 	log.Println("🚦 Registered: POST /api/v2/ekadashi-bhagavat-seva")
 
 	http.HandleFunc("/api/v2/durga-paath",
-		bundle.SevaHandler.HandleSendSeva(domain.SevaTypeDurgaPaath))
+		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeDurgaPaath)))
 	log.Println("🚦 Registered: POST /api/v2/durga-paath")
 
 	http.HandleFunc("/api/v2/saptahik-swami-seva",
-		bundle.SevaHandler.HandleSendSeva(domain.SevaTypeSaptahikSwami))
+		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeSaptahikSwami)))
 	log.Println("🚦 Registered: POST /api/v2/saptahik-swami-seva")
 
 	http.HandleFunc("/api/v2/malhari",
-		bundle.SevaHandler.HandleSendSeva(domain.SevaTypeMalhari))
+		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeMalhari)))
 	log.Println("🚦 Registered: POST /api/v2/malhari")
 
 	http.HandleFunc("/api/v2/darbar",
-		bundle.SevaHandler.HandleSendSeva(domain.SevaTypeDarbar))
+		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar")
 
 	// Individual Reminder Endpoints (send private messages)
 	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva/send-reminders",
-		bundle.ReminderHandler.HandleReminders(domain.SevaTypeEkadashiBhagavat))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeEkadashiBhagavat)))
 	log.Println("🚦 Registered: POST /api/v2/ekadashi-bhagavat-seva/send-reminders")
 
 	http.HandleFunc("/api/v2/durga-paath/send-reminders",
-		bundle.ReminderHandler.HandleReminders(domain.SevaTypeDurgaPaath))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeDurgaPaath)))
 	log.Println("🚦 Registered: POST /api/v2/durga-paath/send-reminders")
 
 	http.HandleFunc("/api/v2/saptahik-swami-seva/send-reminders",
-		bundle.ReminderHandler.HandleReminders(domain.SevaTypeSaptahikSwami))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeSaptahikSwami)))
 	log.Println("🚦 Registered: POST /api/v2/saptahik-swami-seva/send-reminders")
 
 	http.HandleFunc("/api/v2/malhari/send-reminders",
-		bundle.ReminderHandler.HandleReminders(domain.SevaTypeMalhari))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeMalhari)))
 	log.Println("🚦 Registered: POST /api/v2/malhari/send-reminders")
 
 	http.HandleFunc("/api/v2/darbar/send-reminders",
-		bundle.ReminderHandler.HandleReminders(domain.SevaTypeDarbar))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar/send-reminders")
 
 	// Group Announcement Endpoints (send message to group listing pending members)
 	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva/group-announcement",
-		bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeEkadashiBhagavat))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeEkadashiBhagavat)))
 	log.Println("🚦 Registered: POST /api/v2/ekadashi-bhagavat-seva/group-announcement")
 
 	http.HandleFunc("/api/v2/durga-paath/group-announcement",
-		bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeDurgaPaath))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeDurgaPaath)))
 	log.Println("🚦 Registered: POST /api/v2/durga-paath/group-announcement")
 
 	http.HandleFunc("/api/v2/saptahik-swami-seva/group-announcement",
-		bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeSaptahikSwami))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeSaptahikSwami)))
 	log.Println("🚦 Registered: POST /api/v2/saptahik-swami-seva/group-announcement")
 
 	http.HandleFunc("/api/v2/malhari/group-announcement",
-		bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeMalhari))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeMalhari)))
 	log.Println("🚦 Registered: POST /api/v2/malhari/group-announcement")
 
 	http.HandleFunc("/api/v2/darbar/group-announcement",
-		bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeDarbar))
+		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar/group-announcement")
 
 	log.Println("🚦 All v2 API endpoints registered successfully")
 
-	http.HandleFunc("/api/v2/whatsapp-logout", func(wr http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/v2/whatsapp-logout", apiKeyMiddleware(func(wr http.ResponseWriter, r *http.Request) {
 		err := bundle.WhatsAppService.Client.Logout(context.Background())
 		if err != nil {
 			log.Printf("Logout Error %w", err)
@@ -166,5 +166,5 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 		}
 		wr.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(wr).Encode(response)
-	})
+	}))
 }

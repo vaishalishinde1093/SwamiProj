@@ -27,6 +27,26 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// API key validation middleware
+func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		apiKey := os.Getenv("API_KEY")
+
+		if apiKey == "" {
+			http.Error(w, "API_KEY not set", http.StatusExpectationFailed)
+			return
+		}
+
+		providedKey := r.Header.Get("Authorization")
+		if providedKey == "" || providedKey != "Bearer "+apiKey {
+			http.Error(w, "Unauthorized: Invalid or missing API key", http.StatusUnauthorized)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
 // Message represents a chat message for our client
 type Message struct {
 	ID        string
