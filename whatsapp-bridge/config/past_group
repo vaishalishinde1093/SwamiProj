@@ -1,0 +1,86 @@
+ # Durga Paath Groups (13 groups during Navratra, max adhyas: 13)
+  durga_paath:
+    - number: 1
+      jid: "120363419816893790@g.us"
+      name: "श्री दुर्गा पाठ - 1 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_1.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 2
+      jid: "120363402892718934@g.us"
+      name: "श्री दुर्गा पाठ - 2 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_2.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 3
+      jid: "120363404337460559@g.us"
+      name: "श्री दुर्गा पाठ - 3 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_3.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 4
+      jid: "120363419570954765@g.us"
+      name: "श्री दुर्गा पाठ - 4 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_4.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 5
+      jid: "120363421055719893@g.us"
+      name: "श्री दुर्गा पाठ - 5 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_5.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 6
+      jid: "120363403012299781@g.us"
+      name: "श्री दुर्गा पाठ - 6 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_6.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 7
+      jid: "120363419072532726@g.us"
+      name: "श्री दुर्गा पाठ - 7 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_7.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 8
+      jid: "120363421558747732@g.us"
+      name: "श्री दुर्गा पाठ - 8 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_8.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 9
+      jid: "120363422005514627@g.us"
+      name: "श्री दुर्गा पाठ - 9 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_9.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 10
+      jid: "120363401847104444@g.us"
+      name: "श्री दुर्गा पाठ - 10 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_10.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 11
+      jid: "120363422042653411@g.us"
+      name: "श्री दुर्गा पाठ - 11 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_11.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 12
+      jid: "120363405069187332@g.us"
+      name: "श्री दुर्गा पाठ - 12 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_12.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 13
+      jid: "120363403917705224@g.us"
+      name: "श्री दुर्गा पाठ - 13 नवरात्र सेवा"
+      csv_path: "../Navratra/durga_paath_group_13.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 97
+      jid: "919886158097-1416801123@g.us"
+      name: "No BS now, get it - TEST Durga Paath"
+      csv_path: "../Navratra/test_group.csv"
+      max_adhyas: 13
+      max_poll_size: 12
