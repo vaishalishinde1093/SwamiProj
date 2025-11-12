@@ -167,4 +167,5 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 		wr.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(wr).Encode(response)
 	}))
+
 }

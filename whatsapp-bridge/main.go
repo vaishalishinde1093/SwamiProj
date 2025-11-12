@@ -6,12 +6,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"image/png"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"reflect"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -25,6 +27,7 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
+	"rsc.io/qr"
 )
 
 // API key validation middleware
@@ -45,6 +48,39 @@ func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
+}
+
+type QRCodeState struct {
+	mu         sync.RWMutex
+	qrCode     string
+	isLoggedIn bool
+	timestamp  time.Time
+}
+
+var qrState = &QRCodeState{}
+
+// update QR code
+func (q *QRCodeState) SetQRCode(code string) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.qrCode = code
+	q.timestamp = time.Now()
+	q.isLoggedIn = false
+}
+
+// mark as logged in
+func (q *QRCodeState) SetLoogedIn() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.isLoggedIn = true
+	q.qrCode = ""
+}
+
+// Get currrent qr code
+func (q *QRCodeState) GetQRCode() (string, bool, time.Time) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.qrCode, q.isLoggedIn, q.timestamp
 }
 
 // Message represents a chat message for our client
@@ -694,6 +730,59 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		// Handler for getting CSV data for all groups
 		// Handler for Mathaji single group automation (similar to durga-paath-send)
 	}
+
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		qrCode, isLoggedIn, timestamp := qrState.GetQRCode()
+
+		//if already logged in
+		if isLoggedIn {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":    "already_logged_in",
+				"message":   "WhatsApp is already connected",
+				"connected": client.IsConnected(),
+			})
+			return
+		}
+
+		//if QR code is not avaialble
+		if qrCode == "" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "waiting",
+				"message": "waiting for QR code generation, please try again in a moment",
+			})
+			return
+		}
+
+		if time.Since(timestamp) > 3*time.Minute {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "expired",
+				"message": "QR code has expired. please restart the application",
+			})
+			return
+		}
+
+		// Generate QR code
+		qrCodeImg, err := qr.Encode(qrCode, qr.L)
+		if err != nil {
+			http.Error(w, "Failed to generate QR code image", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+
+		png.Encode(w, qrCodeImg.Image())
+	})
 	// Start the server
 	serverAddr := fmt.Sprintf(":%d", port)
 	log.Printf("Starting REST API server on %s...\n", serverAddr)
@@ -762,10 +851,17 @@ func main() {
 			logger.Infof("Received history sync event with %d conversations", len(v.Data.Conversations))
 		case *events.Connected:
 			logger.Infof("Connected to WhatsApp")
+			qrState.SetLoogedIn()
 		case *events.LoggedOut:
 			logger.Warnf("Device logged out, please scan QR code to log in again")
+			qrState.SetQRCode("")
 		}
 	})
+
+	// Start REST API server
+	startRESTServer(client, messageStore, 8081)
+
+	time.Sleep(500 * time.Millisecond)
 
 	// Create channel to track connection success
 	connectedChan := make(chan bool, 1)
@@ -785,7 +881,11 @@ func main() {
 			if evt.Event == "code" {
 				fmt.Println("Scan this QR code with your WhatsApp app:")
 				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
-			} else if evt.Event == "success" || evt.Event == "timeout" || evt.Event == "error" {
+
+				qrState.SetQRCode(evt.Code)
+			} else if evt.Event == "success" {
+				qrState.SetLoogedIn()
+				connectedChan <- true
 				break
 			}
 		}
@@ -804,6 +904,8 @@ func main() {
 			logger.Errorf("failed to connect: %v", err)
 			return
 		}
+
+		qrState.SetLoogedIn()
 		connectedChan <- true
 	}
 
@@ -816,9 +918,6 @@ func main() {
 	}
 
 	fmt.Println("Client connected to WhatsApp! Type 'help' for commands.")
-
-	// Start REST API server
-	startRESTServer(client, messageStore, 8081)
 
 	// Create a channel to keep the main goroutine alive
 	exitChan := make(chan os.Signal, 1)
