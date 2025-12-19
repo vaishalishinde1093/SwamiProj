@@ -16,9 +16,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"runtime"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/mdp/qrterminal"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/proto/waE2E"
@@ -868,27 +868,74 @@ func main() {
 
 	// Connect to WhatsApp
 	if client.Store.ID == nil {
+
+		pairPhone := strings.TrimSpace("+919049555495")
+		pairMethod := strings.ToLower(strings.TrimSpace("phone"))
+		
 		// No ID stored, this is a new client, need to pair with phone
-		qrChan, _ := client.GetQRChannel(context.Background())
+		ctx := context.Background()
+		qrChan, _ := client.GetQRChannel(ctx)
 		err = client.Connect()
 		if err != nil {
 			logger.Errorf("Failed to connect: %v", err)
 			return
 		}
 
-		// Print QR code for pairing with phone
-		for evt := range qrChan {
-			if evt.Event == "code" {
-				fmt.Println("Scan this QR code with your WhatsApp app:")
-				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
 
-				qrState.SetQRCode(evt.Code)
-			} else if evt.Event == "success" {
-				qrState.SetLoogedIn()
+		if pairMethod == "phone" {
+		select {
+		case <-qrChan:
+		case<-time.After(15*time.Second):
+			logger.Warnf("Timeout waiting for initial login webscoket")
+		}
+
+		if pairPhone == "" {
+			logger.Errorf("whatsapp phone not set")
+			return
+		}
+
+		osName := "Linux"
+		switch runtime.GOOS {
+		case "darwin":
+			osName = "Mac OS"
+		case "windows":
+			osName = "Windows"
+		case "linux":
+			osName = "Linux"
+		}
+		clientDisplayName := fmt.Sprintf("Chrome (%s)", osName)
+
+		code, err := client.PairPhone(ctx, pairPhone, true, whatsmeow.PairClientChrome, clientDisplayName)
+		if err != nil {
+			logger.Errorf("Failed to generate pair code : %v", err)
+			return 
+		}
+
+		logger.Warnf("\n phone number pairing enabled with code %s", code)
+		for evt := range qrChan {
+			if evt.Event == "success" {
 				connectedChan <- true
 				break
+			} else if evt.Event == "error" {
+				logger.Errorf("Paring error : %v", evt.Error)
+				return 
 			}
 		}
+		}
+
+		// Print QR code for pairing with phone
+		//for evt := range qrChan {
+		//	if evt.Event == "code" {
+		//		fmt.Println("Scan this QR code with your WhatsApp app:")
+		//		qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
+
+		//		qrState.SetQRCode(evt.Code)
+		//	} else if evt.Event == "success" {
+		//		qrState.SetLoogedIn()
+		//		connectedChan <- true
+		//		break
+		//	}
+		//}
 
 		// Wait for connection
 		select {
