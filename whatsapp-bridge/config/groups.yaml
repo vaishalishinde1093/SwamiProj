@@ -14,61 +14,61 @@ groups:
     - number: 1
       jid: "120363404297526105@g.us"
       name: "गट - 1 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_1.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_1.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 2
       jid: "120363418929198906@g.us"
       name: "गट - 2 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_2.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_2.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 3
       jid: "120363404259596978@g.us"
       name: "गट - 3 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_3.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_3.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 4
       jid: "120363399487193034@g.us"
       name: "गट - 4 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_4.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_4.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 5
       jid: "120363403534906773@g.us"
       name: "गट --5 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_5.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_5.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 6
       jid: "120363418760354638@g.us"
       name: "गट - 6 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_6.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_6.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 7
       jid: "120363419081980191@g.us"
       name: "गट - 7 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_7.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_7.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 8
       jid: "120363420035731843@g.us"
       name: "गट - 8 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_8.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_8.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 9
       jid: "120363420093857562@g.us"
       name: "गट - 9 भागवत एकादशी सेवा"
-      csv_path: "../EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_9.csv"
+      csv_path: "EkadashiBhagavatSeva/ekadashi_bhagavat_seva_group_9.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 98
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST Ekadashi"
-      csv_path: "../EkadashiBhagavatSeva/test_group.csv"
+      csv_path: "EkadashiBhagavatSeva/test_group.csv"
       max_adhyas: 14
       max_poll_size: 12
 
@@ -77,103 +77,103 @@ groups:
     - number: 1
       jid: "120363387695653628@g.us"
       name: "सेवा संघ क्रमांक 1 श्री स्वामी चरित्र साप्ताहिक सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_1.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_1.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 2
       jid: "120363404777322739@g.us"
       name: "संघ - 2 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_2.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_2.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 3
       jid: "120363389336298060@g.us"
       name: "संघ - 3 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_3.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_3.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 4
       jid: "120363393815592486@g.us"
       name: "संघ - 4 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_4.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_4.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 5
       jid: "120363394649170104@g.us"
       name: "संघ - 5 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_5.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_5.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 6
       jid: "120363418110140596@g.us"
       name: "संघ - 6 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_6.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_6.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 7
       jid: "120363418151580827@g.us"
       name: "संघ - 7 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_7.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_7.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 8
       jid: "120363399883967985@g.us"
       name: "संघ - 8 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_8.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_8.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 9
       jid: "120363401903037246@g.us"
       name: "संघ - 9 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_9.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_9.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 10
       jid: "120363419170897601@g.us"
       name: "संघ - 10 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_10.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_10.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 11
       jid: "120363419969350575@g.us"
       name: "संघ - 11 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_11.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_11.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 12
       jid: "120363420094394814@g.us"
       name: "संघ - 12 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_12.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_12.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 13
       jid: "120363420531154965@g.us"
       name: "संघ - 13 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_13.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_13.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 14
       jid: "120363422487788891@g.us"
       name: "संघ -14 स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_14.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_14.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 15
       jid: "120363420277119640@g.us"
       name: "संघ - 15 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_15.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_15.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 16
       jid: "120363420566669482@g.us"
       name: "संघ - 16 साप्ताहिक स्वामी सेवा"
-      csv_path: "../SaptahikSwamiSeva/saptahik_swami_seva_group_16.csv"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_16.csv"
       max_adhyas: 21
       max_poll_size: 12
     - number: 99
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST GROUP"
-      csv_path: "../SaptahikSwamiSeva/test_group.csv"
+      csv_path: "SaptahikSwamiSeva/test_group.csv"
       max_adhyas: 21
       max_poll_size: 12
 
@@ -181,109 +181,109 @@ groups:
     - number: 1
       jid: "120363406536030381@g.us"
       name: "दरबार - 1 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_1.csv"
+      csv_path: "Darbar/durga_paath_group_1.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 2
       jid: "120363406052610718@g.us"
       name: "दरबार - 2 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_2.csv"
+      csv_path: "Darbar/durga_paath_group_2.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 3
       jid: "120363386967513939@g.us"
       name: "दरबार - 3 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_3.csv"
+      csv_path: "Darbar/durga_paath_group_3.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 4
       jid: "120363409006273585@g.us"
       name: "दरबार - 4 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_4.csv"
+      csv_path: "Darbar/durga_paath_group_4.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 5
       jid: "120363407037763994@g.us"
       name: "दरबार - 5 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_5.csv"
+      csv_path: "Darbar/durga_paath_group_5.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 6
       jid: "120363393839445299@g.us"
       name: "दरबार - 6 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_6.csv"
+      csv_path: "Darbar/durga_paath_group_6.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 7
       jid: "120363399653843804@g.us"
       name: "दरबार - 7 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_7.csv"
+      csv_path: "Darbar/durga_paath_group_7.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 8
       jid: "120363418394865202@g.us"
       name: "दरबार - 8 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_8.csv"
+      csv_path: "Darbar/durga_paath_group_8.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 9
       jid: "120363416877399826@g.us"
       name: "दरबार - 9 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_9.csv"
+      csv_path: "Darbar/durga_paath_group_9.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 10
       jid: "120363416014261017@g.us"
       name: "दरबार - 10 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_10.csv"
+      csv_path: "Darbar/durga_paath_group_10.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 11
       jid: "120363402047847704@g.us"
       name: "दरबार - 11 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_11.csv"
+      csv_path: "Darbar/durga_paath_group_11.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 12
       jid: "120363402885206585@g.us"
       name: "दरबार - 12 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_12.csv"
+      csv_path: "Darbar/durga_paath_group_12.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 13
       jid: "120363401724726953@g.us"
       name: "दरबार - 13 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_13.csv"
+      csv_path: "Darbar/durga_paath_group_13.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 14
       jid: "120363401895130186@g.us"
       name: "दरबार - 14 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_14.csv"
+      csv_path: "Darbar/durga_paath_group_14.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 15
       jid: "120363418374864691@g.us"
       name: "दरबार - 15 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_15.csv"
+      csv_path: "Darbar/durga_paath_group_15.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 16
       jid: "120363420357535970@g.us"
       name: "दरबार - 16 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_16.csv"
+      csv_path: "Darbar/durga_paath_group_16.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 17
       jid: "120363402678512659@g.us"
       name: "दरबार - 17 श्री दुर्गा सप्तशती"
-      csv_path: "../Darbar/durga_paath_group_17.csv"
+      csv_path: "Darbar/durga_paath_group_17.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 95
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST Darbar"
-      csv_path: "../Darbar/test_group.csv"
+      csv_path: "Darbar/test_group.csv"
       max_adhyas: 13
       max_poll_size: 12
 
@@ -292,54 +292,54 @@ groups:
     - number: 1
       jid: "120363416498149179@g.us"  # ग्रुप - 1 श्री मल्हारी सप्तशती
       name: "ग्रुप - 1 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-1.csv"
+      csv_path: "Malhari/Malhari-1.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 2
       jid: "120363398915280397@g.us"  # ग्रुप - 2 श्री मल्हारी सप्तशती
       name: "ग्रुप - 2 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-2.csv"
+      csv_path: "Malhari/Malhari-2.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 3
       jid: "120363416286451916@g.us"  # ग्रुप - 3 श्री मल्हारी सप्तशती
       name: "ग्रुप - 3 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-3.csv"
+      csv_path: "Malhari/Malhari-3.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 4
       jid: "120363402059739905@g.us"  # ग्रुप - 4 श्री मल्हारी सप्तशती
       name: "ग्रुप - 4 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-4.csv"
+      csv_path: "Malhari/Malhari-4.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 5
       jid: "120363417262925046@g.us"  # ग्रुप - 5 श्री मल्हारी सप्तशती
       name: "ग्रुप - 5 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-5.csv"
+      csv_path: "Malhari/Malhari-5.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 6
       jid: "120363416569023518@g.us"  # ग्रुप - 6 श्री मल्हारी सप्तशती
       name: "ग्रुप - 6 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-6.csv"
+      csv_path: "Malhari/Malhari-6.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 7
       jid: "120363400739965077@g.us"  # ग्रुप - 7 श्री मल्हारी सप्तशती
       name: "ग्रुप - 7 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-7.csv"
+      csv_path: "Malhari/Malhari-7.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 8
       jid: "120363401904030468@g.us"  # ग्रुप - 8 श्री मल्हारी सप्तशती
       name: "ग्रुप - 8 श्री मल्हारी सप्तशती"
-      csv_path: "../Malhari/Malhari-8.csv"
+      csv_path: "Malhari/Malhari-8.csv"
       max_adhyas: 14
       max_poll_size: 12
     - number: 96
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST Malhari"
-      csv_path: "../Malhari/test_group.csv"
+      csv_path: "Malhari/test_group.csv"
       max_adhyas: 14
       max_poll_size: 12
