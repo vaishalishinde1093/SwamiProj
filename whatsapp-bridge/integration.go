@@ -153,7 +153,7 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 	http.HandleFunc("/api/v2/whatsapp-logout", apiKeyMiddleware(func(wr http.ResponseWriter, r *http.Request) {
 		err := bundle.WhatsAppService.Client.Logout(context.Background())
 		if err != nil {
-			log.Printf("Logout Error %w", err)
+			log.Printf("Logout Error %v", err)
 			http.Error(wr, fmt.Sprintf("Logout Failed: %v", err), http.StatusInternalServerError)
 		}
 

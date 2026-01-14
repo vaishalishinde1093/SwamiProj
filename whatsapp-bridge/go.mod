@@ -4,7 +4,6 @@ go 1.24.1
 
 require (
 	github.com/mattn/go-sqlite3 v1.14.32
-	github.com/mdp/qrterminal v1.0.1
 	go.mau.fi/whatsmeow v0.0.0-20251028165006-ad7a618ba42f
 	google.golang.org/protobuf v1.36.10
 )

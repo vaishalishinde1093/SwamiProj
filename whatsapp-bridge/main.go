@@ -33,6 +33,11 @@ import (
 // API key validation middleware
 func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			next(w, r)
+			return
+		}
+
 		apiKey := os.Getenv("API_KEY")
 
 		if apiKey == "" {
@@ -344,9 +349,9 @@ func sendWhatsAppPoll(client *whatsmeow.Client, messageStore *MessageStore, reci
 
 	// Store poll data for future vote matching
 	messageStore.StorePollData(sendMsg.ID, pollName, recipientJID.String(), pollOptions)
-	log.Printf("✅ Poll data stored with ID: %v", sendMsg.ID, pollName, recipientJID.String(), len(pollOptions))
+	log.Printf("✅ Poll data stored with ID: %v (%s, %s, %d options)", sendMsg.ID, pollName, recipientJID.String(), len(pollOptions))
 
-	return true, fmt.Sprintf("Poll sent successfully with %d options", sendMsg.ID, pollName, recipientJID, len(pollOptions))
+	return true, fmt.Sprintf("Poll sent successfully with %d options", len(pollOptions))
 }
 
 // Delete messages by IDs from database
@@ -483,7 +488,7 @@ func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message str
 			mediaType = whatsmeow.MediaDocument
 			mimeType = "application/octet-stream"
 		}
-		fmt.Println("MimeType. %v", mimeType)
+		log.Printf("MimeType. %v", mimeType)
 		// Upload media to WhatsApp servers
 		resp, err := client.Upload(context.Background(), mediaData, mediaType)
 		if err != nil {
@@ -574,7 +579,7 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 				} else {
 
 					// Match selected hashes with original poll options
-					votedOptionNames := matchPollOptions(selectedHashes, pollOptions)
+					votedOptionNames = matchPollOptions(selectedHashes, pollOptions)
 					logger.Infof("Matched %d voted options: %v", len(votedOptionNames), votedOptionNames)
 
 					// Store the vote with option names
@@ -592,7 +597,7 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 				msg.Info.ID,
 				chatJID,
 				voterUser,
-				fmt.Sprintf("POLL_VOTE:%v:%v:%v", pollMessageID, votedOptionNames), // Include voted names
+				fmt.Sprintf("POLL_VOTE:%v:%v", pollMessageID, votedOptionNames), // Include voted names
 				msg.Info.Timestamp,
 				false,       // Poll votes are never from "me"
 				"poll_vote", // Special media type
@@ -720,15 +725,12 @@ func (store *MessageStore) StorePollVote(pollID, voterJID string, votedOptionNam
 
 // Start a REST API server to expose the WhatsApp client functionality
 func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port int) {
-	// Initialize Refactored Components (Phase 2)
 	componentsBundle, err := initializeRefactoredComponents(client, messageStore)
 	if err != nil {
 		log.Println("Continuing with legacy endpoints only...")
 	} else {
-		// Register the new v2 endpoints (seva automation + reminders)
 		registerRefactoredHandlers(componentsBundle)
-		// Handler for getting CSV data for all groups
-		// Handler for Mathaji single group automation (similar to durga-paath-send)
+		registerAdminHandlers(componentsBundle)
 	}
 
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
@@ -1016,9 +1018,9 @@ func GetChatName(client *whatsmeow.Client, messageStore *MessageStore, jid types
 		}
 
 		// Use the name we found
-		if displayName != "" && displayName != "" {
+		if displayName != "" {
 			name = displayName
-		} else if convName != "" && convName != "" {
+		} else if convName != "" {
 			name = convName
 		} else {
 			// If we didn't get a name, try group info

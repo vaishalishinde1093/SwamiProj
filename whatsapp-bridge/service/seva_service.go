@@ -156,7 +156,7 @@ func (ss *SevaService) getGroupConfig(sevaType domain.SevaType, groupNo int) (*d
 			}, nil
 		}
 	}
-	return nil, fmt.Errorf("group no. not found for seva type %s", groupNo, sevaType)
+	return nil, fmt.Errorf("group %d not found for seva type %s", groupNo, sevaType)
 }
 
 // buildSevaMessage creates the seva message based on seva type
