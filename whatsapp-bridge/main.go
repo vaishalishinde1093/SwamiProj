@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -798,6 +799,20 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 }
 
 func main() {
+	if os.Getenv("IMPORT_MEMBERS") == "1" {
+		if err := importMembersFromCSVToPostgres("config/groups.yaml"); err != nil {
+			log.Fatalf("failed to import members: %v", err)
+		}
+		return
+	}
+
+	port := 8081
+	if p := os.Getenv("PORT"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil {
+			port = parsed
+		}
+	}
+
 	// Set up logger
 	logger := waLog.Stdout("Client", "DEBUG", true)
 	logger.Infof("Starting WhatsApp Client...")
@@ -861,7 +876,7 @@ func main() {
 	})
 
 	// Start REST API server
-	startRESTServer(client, messageStore, 8081)
+	startRESTServer(client, messageStore, port)
 
 	time.Sleep(500 * time.Millisecond)
 

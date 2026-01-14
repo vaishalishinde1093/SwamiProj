@@ -19,8 +19,7 @@ export type Member = {
 export type GroupMembersResponse = {
   seva_type: string;
   group_no: number;
-  csv_path: string;
-  hash: string;
+  version: number;
   members: Member[];
 };
 

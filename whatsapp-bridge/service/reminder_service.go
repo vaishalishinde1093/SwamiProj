@@ -13,7 +13,7 @@ import (
 
 // ReminderService handles sending seva completion reminders
 type ReminderService struct {
-	csvRepo      *repository.CSVRepository
+	memberStore  repository.MemberStore
 	whatsappSvc  WhatsAppClient
 	config       *config.Config
 	messageStore MessageStore
@@ -21,13 +21,13 @@ type ReminderService struct {
 
 // NewReminderService creates a new reminder service
 func NewReminderService(
-	csvRepo *repository.CSVRepository,
+	memberStore repository.MemberStore,
 	whatsappSvc WhatsAppClient,
 	cfg *config.Config,
 	msgStore MessageStore,
 ) *ReminderService {
 	return &ReminderService{
-		csvRepo:      csvRepo,
+		memberStore:  memberStore,
 		whatsappSvc:  whatsappSvc,
 		config:       cfg,
 		messageStore: msgStore,
@@ -84,8 +84,7 @@ func (rs *ReminderService) SendRemindersAutomatic(sevaType domain.SevaType, grou
 		return nil, fmt.Errorf("failed to get group config: %w", err)
 	}
 
-	// Read all members from CSV
-	allMembers, err := rs.csvRepo.ReadMembers(groupConfig.CSVPath)
+	allMembers, _, err := rs.memberStore.GetGroupMembers(sevaType, groupNo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read members: %w", err)
 	}
@@ -159,14 +158,7 @@ func (rs *ReminderService) findMembersNotCompleted(allMembers []domain.Member, c
 // Use this at 4pm to remind everyone (broadcast mode)
 func (rs *ReminderService) SendRemindersToAll(sevaType domain.SevaType, groupNo int, customMessage string) (*ReminderResult, error) {
 	log.Printf("⚡ Sending reminders to ALL members of %s group %d", sevaType, groupNo)
-	// Get group configuration
-	groupConfig, err := rs.getGroupConfig(sevaType, groupNo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get group config: %w", err)
-	}
-
-	// Read all members from CSV
-	allMembers, err := rs.csvRepo.ReadMembers(groupConfig.CSVPath)
+	allMembers, _, err := rs.memberStore.GetGroupMembers(sevaType, groupNo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read members: %w", err)
 	}
@@ -201,14 +193,7 @@ func (rs *ReminderService) SendRemindersToSpecific(sevaType domain.SevaType, gro
 		return nil, fmt.Errorf("no member names provided")
 	}
 
-	// Get group configuration
-	groupConfig, err := rs.getGroupConfig(sevaType, groupNo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get group config: %w", err)
-	}
-
-	// Read all members from CSV
-	allMembers, err := rs.csvRepo.ReadMembers(groupConfig.CSVPath)
+	allMembers, _, err := rs.memberStore.GetGroupMembers(sevaType, groupNo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read members: %w", err)
 	}
@@ -375,8 +360,7 @@ func (rs *ReminderService) SendGroupAnnouncement(sevaType domain.SevaType, group
 		return "", fmt.Errorf("failed to get group config: %w", err)
 	}
 
-	// Read all members from CSV
-	allMembers, err := rs.csvRepo.ReadMembers(groupConfig.CSVPath)
+	allMembers, _, err := rs.memberStore.GetGroupMembers(sevaType, groupNo)
 	if err != nil {
 		return "", fmt.Errorf("failed to read members: %w", err)
 	}

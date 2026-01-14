@@ -69,12 +69,12 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
         `/api/admin/v1/groups/${encodeURIComponent(sevaType)}/${groupNo}/members`,
         {
           method: "PUT",
-          body: JSON.stringify({ expected_hash: data.hash, members: clean })
+          body: JSON.stringify({ expected_version: data.version, members: clean })
         }
       );
 
       setToast(t("groupMembers.saved"));
-      if (resp?.hash) {
+      if (resp?.version !== undefined) {
         const next = await api<GroupMembersResponse>(
           `/api/admin/v1/groups/${encodeURIComponent(sevaType)}/${groupNo}/members`
         );
@@ -104,7 +104,7 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
             </div>
             {data ? (
               <div className="mt-1 text-xs text-muted truncate">
-                {t("groupMembers.csv")}: {data.csv_path}
+                {t("groupMembers.csv")}: —
               </div>
             ) : null}
           </div>

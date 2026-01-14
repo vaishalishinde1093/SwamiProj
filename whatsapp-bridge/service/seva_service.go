@@ -13,19 +13,19 @@ import (
 
 // SevaService handles seva automation (sending messages and polls)
 type SevaService struct {
-	csvRepo     *repository.CSVRepository
+	memberStore repository.MemberStore
 	whatsAppSvc WhatsAppClient
 	config      *config.Config
 }
 
 // NewSevaService creates a new seva service
 func NewSevaService(
-	csvRepo *repository.CSVRepository,
+	memberStore repository.MemberStore,
 	whatsAppSvc WhatsAppClient,
 	config *config.Config,
 ) *SevaService {
 	return &SevaService{
-		csvRepo:     csvRepo,
+		memberStore: memberStore,
 		whatsAppSvc: whatsAppSvc,
 		config:      config,
 	}
@@ -41,8 +41,7 @@ func (ss *SevaService) SendSevaAutomation(sevaType domain.SevaType, groupNo int)
 		return fmt.Errorf("failed to get group config: %w", err)
 	}
 
-	// Read members from CSV
-	members, err := ss.csvRepo.ReadMembers(groupConfig.CSVPath)
+	members, version, err := ss.memberStore.GetGroupMembers(sevaType, groupNo)
 
 	if err != nil {
 		return fmt.Errorf("failed to read members: %w", err)
@@ -110,31 +109,29 @@ func (ss *SevaService) SendSevaAutomation(sevaType domain.SevaType, groupNo int)
 		log.Printf("✅ Poll 2/%d sent successfully", numPolls)
 	}
 
-	// Update CSV with rotated adhyay numbers for next week
-	log.Printf("📝 Updating CSV with rotated adhyay numbers...")
-	if err := ss.updateCSVWithRotatedAdhyay(groupConfig.CSVPath, members, sevaType, groupNo); err != nil {
-		log.Printf("⚠️ WARNING: Failed to update CSV: %v", err)
+	log.Printf("📝 Updating members with rotated adhyay numbers...")
+	if err := ss.updateMembersWithRotatedAdhyay(sevaType, groupNo, version, members, sevaType); err != nil {
+		log.Printf("⚠️ WARNING: Failed to update members: %v", err)
 		// Don't halt the whole operation if CSV update fails
 	} else {
-		log.Printf("📝 CSV updated successfully")
+		log.Printf("📝 Members updated successfully")
 	}
 
 	log.Printf("✅ Seva automation completed for %s group %d", sevaType, groupNo)
 	return nil
 }
 
-// updateCSVWithRotatedAdhyay updates the CSV file with rotated adhyay numbers
-func (ss *SevaService) updateCSVWithRotatedAdhyay(csvPath string, members []domain.Member, sevaType domain.SevaType, groupNo int) error {
+
+func (ss *SevaService) updateMembersWithRotatedAdhyay(sevaType domain.SevaType, groupNo int, expectedVersion int64, members []domain.Member, sevaTypeForMax domain.SevaType) error {
 	// Create a new slice with rotated adhyay numbers
-	maxAdhyay := ss.getMaxAdhyayForSeva(sevaType)
+	maxAdhyay := ss.getMaxAdhyayForSeva(sevaTypeForMax)
 	updatedMembers := make([]domain.Member, len(members))
 	for i, member := range members {
 		updatedMembers[i] = member
 		updatedMembers[i].AdhyayNo = member.AdhyayNo%maxAdhyay + 1
 	}
-
-	// Write updated members back to CSV
-	return ss.csvRepo.WriteMembers(csvPath, updatedMembers, groupNo)
+	_, err := ss.memberStore.ReplaceGroupMembers(sevaType, groupNo, updatedMembers, expectedVersion)
+	return err
 }
 
 // getGroupConfig retrieves configuration for a specific group

@@ -19,7 +19,7 @@ import (
 // ComponentsBundle holds all initialized services and handlers
 type ComponentsBundle struct {
 	Config          *config.Config
-	CSVRepo         *repository.CSVRepository
+	MemberStore     repository.MemberStore
 	WhatsAppService *service.WhatsAppServiceWrapper
 	SevaService     *service.SevaService
 	ReminderService *service.ReminderService
@@ -37,9 +37,15 @@ func initializeRefactoredComponents(client *whatsmeow.Client, messageStore *Mess
 	}
 	log.Printf("🚦 Loaded configuration with %d seva types.", len(cfg.Groups))
 
-	// Initialize CSV repository
-	csvRepo := repository.NewCSVRepository()
-	log.Printf("🚦 Initialized CSV repository")
+	db, err := repository.OpenPostgresFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open postgres: %w", err)
+	}
+	pgStore := repository.NewPostgresMemberStore(db)
+	if err := pgStore.EnsureSchema(context.Background()); err != nil {
+		return nil, fmt.Errorf("failed to ensure postgres schema: %w", err)
+	}
+	log.Printf("🚦 Initialized Postgres member store")
 
 	pollFunc := func(c *whatsmeow.Client, ms service.MessageStore, receipient string, pollName string, pollOptions []string, selectableCount uint32) (bool, string) {
 		return sendWhatsAppPoll(c, messageStore, receipient, pollName, pollOptions, selectableCount)
@@ -54,11 +60,11 @@ func initializeRefactoredComponents(client *whatsmeow.Client, messageStore *Mess
 	log.Printf("🚦 Created WhatsApp service wrapper")
 
 	// Initialize seva service
-	sevaService := service.NewSevaService(csvRepo, whatsAppSvc, cfg)
+	sevaService := service.NewSevaService(pgStore, whatsAppSvc, cfg)
 	log.Printf("🚦 Initialized seva service")
 
 	// Initialize reminder service
-	reminderService := service.NewReminderService(csvRepo, whatsAppSvc, cfg, messageStore)
+	reminderService := service.NewReminderService(pgStore, whatsAppSvc, cfg, messageStore)
 	log.Printf("🚦 Initialized reminder service")
 
 	// Initialize seva handler
@@ -71,7 +77,7 @@ func initializeRefactoredComponents(client *whatsmeow.Client, messageStore *Mess
 
 	bundle := &ComponentsBundle{
 		Config:          cfg,
-		CSVRepo:         csvRepo,
+		MemberStore:     pgStore,
 		WhatsAppService: whatsAppSvc,
 		SevaService:     sevaService,
 		ReminderService: reminderService,

@@ -362,13 +362,12 @@ func persistConfigToDisk(cfg *config.Config) error {
 type groupMembersResponse struct {
 	SevaType string         `json:"seva_type"`
 	GroupNo  int            `json:"group_no"`
-	CSVPath  string         `json:"csv_path"`
-	Hash     string         `json:"hash"`
+	Version  int64          `json:"version"`
 	Members  []domain.Member `json:"members"`
 }
 
 type updateGroupMembersRequest struct {
-	ExpectedHash string          `json:"expected_hash"`
+	ExpectedVersion int64        `json:"expected_version"`
 	Members      []domain.Member `json:"members"`
 }
 
@@ -406,34 +405,19 @@ func (a *adminAPI) handleGroupMembers(w http.ResponseWriter, r *http.Request, se
 		return
 	}
 
-	abs := csvPath
-	// keep relative paths working
-	if !filepath.IsAbs(abs) {
-		abs = csvPath
-	}
-
-	m := a.lockForPath(abs)
+	key := fmt.Sprintf("%s:%d", sevaType, groupNo)
+	m := a.lockForPath(key)
 	m.Lock()
 	defer m.Unlock()
 
 	switch r.Method {
 	case http.MethodGet:
-		h, _, err := readFileHash(csvPath)
+		members, version, err := a.bundle.MemberStore.GetGroupMembers(domain.SevaType(sevaType), groupNo)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				writeJSON(w, http.StatusOK, groupMembersResponse{SevaType: sevaType, GroupNo: groupNo, CSVPath: csvPath, Hash: "", Members: []domain.Member{}})
-				return
-			}
-			http.Error(w, fmt.Sprintf("failed to read csv: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to load members: %v", err), http.StatusInternalServerError)
 			return
 		}
-
-		members, err := a.bundle.CSVRepo.ReadMembers(csvPath)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to parse csv: %v", err), http.StatusInternalServerError)
-			return
-		}
-		writeJSON(w, http.StatusOK, groupMembersResponse{SevaType: sevaType, GroupNo: groupNo, CSVPath: csvPath, Hash: h, Members: members})
+		writeJSON(w, http.StatusOK, groupMembersResponse{SevaType: sevaType, GroupNo: groupNo, Version: version, Members: members})
 		return
 
 	case http.MethodPut:
@@ -442,39 +426,28 @@ func (a *adminAPI) handleGroupMembers(w http.ResponseWriter, r *http.Request, se
 			http.Error(w, "invalid json", http.StatusBadRequest)
 			return
 		}
-		currentHash, _, err := readFileHash(csvPath)
+		newVersion, err := a.bundle.MemberStore.ReplaceGroupMembers(domain.SevaType(sevaType), groupNo, req.Members, req.ExpectedVersion)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				currentHash = ""
-			} else {
-				http.Error(w, fmt.Sprintf("failed to read csv: %v", err), http.StatusInternalServerError)
+			if err.Error() == "conflict" {
+				_, currentVersion, verr := a.bundle.MemberStore.GetGroupMembers(domain.SevaType(sevaType), groupNo)
+				if verr != nil {
+					http.Error(w, fmt.Sprintf("conflict; failed to read current version: %v", verr), http.StatusInternalServerError)
+					return
+				}
+				writeJSON(w, http.StatusConflict, map[string]any{
+					"error":            "conflict",
+					"current_version":  currentVersion,
+					"expected_version": req.ExpectedVersion,
+				})
 				return
 			}
-		}
-
-		if req.ExpectedHash != currentHash {
-			writeJSON(w, http.StatusConflict, map[string]any{
-				"error":         "conflict",
-				"current_hash":  currentHash,
-				"expected_hash": req.ExpectedHash,
-			})
-			return
-		}
-
-		if err := a.bundle.CSVRepo.WriteMembers(csvPath, req.Members, groupNo); err != nil {
-			http.Error(w, fmt.Sprintf("failed to write csv: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		newHash, _, err := readFileHash(csvPath)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to re-hash csv: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("failed to write members: %v", err), http.StatusInternalServerError)
 			return
 		}
 
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success": true,
-			"hash":    newHash,
+			"version": newVersion,
 		})
 		return
 	default:
@@ -514,9 +487,8 @@ func (a *adminAPI) handleMembersDirectory(w http.ResponseWriter, r *http.Request
 
 	for sevaType, gl := range groups {
 		for _, g := range gl {
-			members, err := a.bundle.CSVRepo.ReadMembers(g.CSVPath)
+			members, _, err := a.bundle.MemberStore.GetGroupMembers(domain.SevaType(sevaType), g.Number)
 			if err != nil {
-				// Skip unreadable files but keep the endpoint alive.
 				continue
 			}
 			for _, m := range members {
