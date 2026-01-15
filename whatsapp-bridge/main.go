@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image/png"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -726,6 +727,33 @@ func (store *MessageStore) StorePollVote(pollID, voterJID string, votedOptionNam
 
 // Start a REST API server to expose the WhatsApp client functionality
 func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port int) {
+	serverAddr := fmt.Sprintf(":%d", port)
+
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"service":"whatsapp-bridge"}`))
+	})
+
+	ln, err := net.Listen("tcp", serverAddr)
+	if err != nil {
+		log.Fatalf("failed to bind REST server on %s: %v", serverAddr, err)
+	}
+
+	log.Printf("Starting REST API server on %s...\n", serverAddr)
+
+	go func() {
+		if err := http.Serve(ln, nil); err != nil {
+			log.Printf("REST API server error: %v\n", err)
+		}
+	}()
+
 	componentsBundle, err := initializeRefactoredComponents(client, messageStore)
 	if err != nil {
 		log.Println("Continuing with legacy endpoints only...")
@@ -786,16 +814,7 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 
 		png.Encode(w, qrCodeImg.Image())
 	})
-	// Start the server
-	serverAddr := fmt.Sprintf(":%d", port)
-	log.Printf("Starting REST API server on %s...\n", serverAddr)
-
-	// Run server in a goroutine so it doesn't block
-	go func() {
-		if err := http.ListenAndServe(serverAddr, nil); err != nil {
-			log.Printf("REST API server error: %v\n", err)
-		}
-	}()
+	// server is already listening
 }
 
 func main() {
