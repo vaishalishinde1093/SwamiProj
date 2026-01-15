@@ -8,4 +8,4 @@ export PORT="${PORT:-8081}"
 # - POSTGRES_DSN
 # - API_KEY
 
-exec go run .
+exec ./app
