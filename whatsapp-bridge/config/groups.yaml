@@ -292,7 +292,7 @@ groups:
       csv_path: "Darbar/durga_paath_group_18.csv"
       max_adhyas: 13
       max_poll_size: 12
-    - number: 10pm 9
+    - number: 19
       jid: "120363407235520281@g.us"
       name: "दरबार - 19 श्री दुर्गा सप्तशती"
       csv_path: "Darbar/durga_paath_group_19.csv"
