@@ -170,6 +170,12 @@ groups:
       csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_16.csv"
       max_adhyas: 21
       max_poll_size: 12
+    - number: 17
+      jid: "120363423440251293@g.us"
+      name: "संघ - 17 साप्ताहिक स्वामी सेवा"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_17.csv"
+      max_adhyas: 21
+      max_poll_size: 12
     - number: 99
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST GROUP"
@@ -278,6 +284,18 @@ groups:
       jid: "120363402678512659@g.us"
       name: "दरबार - 17 श्री दुर्गा सप्तशती"
       csv_path: "Darbar/durga_paath_group_17.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 18
+      jid: "120363404454579984@g.us"
+      name: "दरबार - 18 श्री दुर्गा सप्तशती"
+      csv_path: "Darbar/durga_paath_group_18.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 10pm 9
+      jid: "120363407235520281@g.us"
+      name: "दरबार - 19 श्री दुर्गा सप्तशती"
+      csv_path: "Darbar/durga_paath_group_19.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 95
