@@ -1168,17 +1168,38 @@ func (store *MessageStore) GetCompletedMembersNames(charJID string) (map[string]
 
 	completedMembers := make(map[string]bool)
 
-	rows, err := store.db.Query(`
-		SELECT pv.voted_option_names
-		FROM poll_votes pv
-		WHERE pv.poll_id IN(
-			SELECT poll_id 
-			FROM poll_data
-			where chat_jid = ?
-			ORDER BY timestamp DESC
-			LIMIT 2
-			) and pv.voted_option_names != 'null'
-	`, charJID)
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if store.pollDialect == "postgres" {
+		rows, err = store.pollDB.Query(`
+			SELECT pv.voted_option_names::text
+			FROM poll_votes pv
+			JOIN poll_data pd ON pd.poll_id = pv.poll_id
+			WHERE pd.poll_id IN (
+				SELECT poll_id
+				FROM poll_data
+				WHERE chat_jid = $1
+				ORDER BY timestamp DESC
+				LIMIT 2
+			)
+			AND pv.voted_option_names IS NOT NULL
+			AND pv.voted_option_names <> 'null'::jsonb
+		`, charJID)
+	} else {
+		rows, err = store.pollDB.Query(`
+			SELECT pv.voted_option_names
+			FROM poll_votes pv
+			WHERE pv.poll_id IN(
+				SELECT poll_id
+				FROM poll_data
+				where chat_jid = ?
+				ORDER BY timestamp DESC
+				LIMIT 2
+				) and pv.voted_option_names != 'null'
+		`, charJID)
+	}
 
 	if err != nil {
 		return nil, err

@@ -259,14 +259,14 @@ func (rs *ReminderService) buildReminderMessage(sevaType domain.SevaType, groupN
 	//dayAndSeva := fmt.Sprintf("%s %s", marathiDay, sevaName)
 
 	// New reminder message template
-	template := `आजची आपली %s सेवा अजून बाकी आहे. तरी कृपया लवकर पूर्ण करावी. संध्याकाळी सहा वाजेच्या आत सेवा पूर्ण करून पोलला (Poll) टिक करावे. तुमची सेवा पूर्ण झाल्याशिवाय ग्रुप पूर्ण होऊ शकत नाही, म्हणून सहकार्य करावे.
+	template := `आजची आपली %s सेवा (ग्रुप क्रमांक %d) अजून बाकी आहे. तरी कृपया लवकर पूर्ण करावी. संध्याकाळी सहा वाजेच्या आत सेवा पूर्ण करून पोलला (Poll) टिक करावे. तुमची सेवा पूर्ण झाल्याशिवाय ग्रुप पूर्ण होऊ शकत नाही, म्हणून सहकार्य करावे.
 
 आपली सेवा पूर्ण झाली असल्यास, कृपया खालील पोलवर क्लिक करा:
 
 श्री स्वामी समर्थ 🙏
 मिनाक्षी बागुल 🙏`
 
-	return fmt.Sprintf(template, sevaName)
+	return fmt.Sprintf(template, sevaName, groupNo)
 }
 
 // sendReminderToMember sends a reminder to a single member
@@ -384,7 +384,7 @@ func (rs *ReminderService) SendGroupAnnouncement(sevaType domain.SevaType, group
 	// Build list of member names
 	var namesList []string
 	for _, member := range nonCompletedMembers {
-		namesList = append(namesList, member.Name)
+		namesList = append(namesList, fmt.Sprintf("%s : %d", member.Name, member.AdhyayNo))
 	}
 	namesStr := strings.Join(namesList, ", ")
 
