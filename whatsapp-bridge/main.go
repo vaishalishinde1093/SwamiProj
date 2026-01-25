@@ -1001,8 +1001,11 @@ func main() {
 		// Connect to WhatsApp
 		if client.Store.ID == nil {
 
-			pairPhone := strings.TrimSpace("+919049555495")
-			pairMethod := strings.ToLower(strings.TrimSpace("phone"))
+			pairPhone := strings.TrimSpace(os.Getenv("WHATSAPP_PAIR_PHONE"))
+			pairMethod := strings.ToLower(strings.TrimSpace(os.Getenv("WHATSAPP_PAIR_METHOD")))
+			if pairMethod == "" {
+				pairMethod = "phone"
+			}
 
 			// No ID stored, this is a new client, need to pair with phone
 			ctx := context.Background()
