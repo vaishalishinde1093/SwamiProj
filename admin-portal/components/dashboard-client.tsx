@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api, AdminGroup } from "@/lib/bridge";
 import { t, sevaTypeLabel } from "@/lib/strings";
 import { DeepakIcon, GhantaIcon, MandirIcon, SpinnerIcon, UsersIcon } from "@/components/devotional-icons";
+import { ProgressPopup } from "@/components/progress-popup";
 
 type SevaAction =
   | { kind: "send"; sevaType: string; groupNo: number }
@@ -44,6 +45,10 @@ export function DashboardClient() {
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [expandedSevaType, setExpandedSevaType] = useState<string | null>(null);
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progressTitle, setProgressTitle] = useState("");
+  const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [progressStatus, setProgressStatus] = useState<"loading" | "success" | "error">("loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +88,13 @@ export function DashboardClient() {
       return;
     }
 
+    const kindLabel =
+      action.kind === "send" ? t("dashboard.pollMessage") : action.kind === "remind" ? t("dashboard.remind") : t("dashboard.announce");
+    setProgressTitle(kindLabel);
+    setProgressMessage(`${sevaTypeLabel(action.sevaType)} · ${t("dashboard.group")} ${action.groupNo}`);
+    setProgressStatus("loading");
+    setProgressOpen(true);
+
     const key = `${action.kind}:${action.sevaType}:${action.groupNo}`;
     setBusy(key);
     setToast(null);
@@ -91,8 +103,12 @@ export function DashboardClient() {
       const body: any = { group_no: action.groupNo };
       const resp = await api<any>(ep, { method: "POST", body: JSON.stringify(body) });
       setToast(resp?.message ? String(resp.message) : t("dashboard.actionDone"));
+      setProgressStatus("success");
+      setProgressMessage(resp?.message ? String(resp.message) : t("dashboard.actionDone"));
     } catch (e) {
       setToast(e instanceof Error ? e.message : t("dashboard.actionFailed"));
+      setProgressStatus("error");
+      setProgressMessage(e instanceof Error ? e.message : t("dashboard.actionFailed"));
     } finally {
       setBusy(null);
     }
@@ -104,6 +120,13 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-4">
+      <ProgressPopup
+        open={progressOpen}
+        title={progressTitle}
+        message={progressMessage}
+        status={progressStatus}
+        onClose={() => setProgressOpen(false)}
+      />
       <div className="rounded-2xl bg-panel/60 border border-black/10 shadow-soft p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -129,7 +152,7 @@ export function DashboardClient() {
       ) : error ? (
         <div className="text-sm text-danger">{error}</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {grouped.map(([sevaType, gl]) => (
             <div
               key={sevaType}

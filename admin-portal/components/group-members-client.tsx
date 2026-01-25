@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api, GroupMembersResponse, Member } from "@/lib/bridge";
 import { t, sevaTypeLabel } from "@/lib/strings";
 import { BackIcon, PlusIcon, SaveIcon, TrashIcon } from "@/components/devotional-icons";
+import { ProgressPopup } from "@/components/progress-popup";
 
 export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; groupNo: number }) {
   const [data, setData] = useState<GroupMembersResponse | null>(null);
@@ -12,6 +13,10 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progressTitle, setProgressTitle] = useState("");
+  const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [progressStatus, setProgressStatus] = useState<"loading" | "success" | "error">("loading");
 
   useEffect(() => {
     void load();
@@ -53,6 +58,10 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
 
   async function save() {
     if (!data) return;
+    setProgressTitle(t("groupMembers.save"));
+    setProgressMessage(`${sevaTypeLabel(sevaType)} · ${t("dashboard.group")} ${groupNo}`);
+    setProgressStatus("loading");
+    setProgressOpen(true);
     setBusy(true);
     setToast(null);
 
@@ -73,7 +82,10 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
         }
       );
 
-      setToast(t("groupMembers.saved"));
+      const msg = t("groupMembers.saved");
+      setToast(msg);
+      setProgressStatus("success");
+      setProgressMessage(msg);
       if (resp?.version !== undefined) {
         const next = await api<GroupMembersResponse>(
           `/api/admin/v1/groups/${encodeURIComponent(sevaType)}/${groupNo}/members`
@@ -82,7 +94,10 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
         setDraft(next.members);
       }
     } catch (e) {
-      setToast(e instanceof Error ? e.message : t("groupMembers.saveFailed"));
+      const msg = e instanceof Error ? e.message : t("groupMembers.saveFailed");
+      setToast(msg);
+      setProgressStatus("error");
+      setProgressMessage(msg);
     } finally {
       setBusy(false);
     }
@@ -90,6 +105,13 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
 
   return (
     <div className="space-y-4">
+      <ProgressPopup
+        open={progressOpen}
+        title={progressTitle}
+        message={progressMessage}
+        status={progressStatus}
+        onClose={() => setProgressOpen(false)}
+      />
       <div className="rounded-2xl bg-panel/60 border border-black/10 shadow-soft p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -102,11 +124,6 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
             <div className="mt-1 text-sm text-muted">
               {t("groupMembers.total")}: {stats.total} · {t("groupMembers.withPhone")}: {stats.withPhone}
             </div>
-            {data ? (
-              <div className="mt-1 text-xs text-muted truncate">
-                {t("groupMembers.csv")}: —
-              </div>
-            ) : null}
           </div>
           <div className="flex gap-2">
             <button
@@ -154,11 +171,15 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
                 </div>
                 <div className="col-span-6 md:col-span-2">
                   <input
-                    type="number"
-                    value={m.adhyay_no}
-                    onChange={(e) => setRow(i, { adhyay_no: Number(e.target.value) })}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={m.adhyay_no > 0 ? String(m.adhyay_no) : ""}
+                    onChange={(e) => {
+                      const onlyDigits = e.target.value.replace(/\D/g, "");
+                      setRow(i, { adhyay_no: onlyDigits ? Number(onlyDigits) : 0 });
+                    }}
                     className="w-full rounded-lg bg-panel2/80 border border-black/10 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand/60"
-                    min={1}
                   />
                 </div>
                 <div className="col-span-6 md:col-span-5">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api, AdminGroup } from "@/lib/bridge";
 import { t, sevaTypeLabel } from "@/lib/strings";
 import { RefreshIcon, SaveIcon, SpinnerIcon } from "@/components/devotional-icons";
+import { ProgressPopup } from "@/components/progress-popup";
 
 export function GroupsClient() {
   const [groups, setGroups] = useState<AdminGroup[]>([]);
@@ -14,6 +15,10 @@ export function GroupsClient() {
   const [busy, setBusy] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedSevaType, setExpandedSevaType] = useState<string | null>(null);
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progressTitle, setProgressTitle] = useState("");
+  const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [progressStatus, setProgressStatus] = useState<"loading" | "success" | "error">("loading");
 
   useEffect(() => {
     void load();
@@ -65,6 +70,10 @@ export function GroupsClient() {
 
   async function save(g: AdminGroup) {
     const key = `${g.seva_type}:${g.number}`;
+    setProgressTitle(t("groups.save"));
+    setProgressMessage(`${sevaTypeLabel(g.seva_type)} ${t("groups.group")} ${g.number}`);
+    setProgressStatus("loading");
+    setProgressOpen(true);
     setBusy(key);
     setToast(null);
     try {
@@ -72,23 +81,39 @@ export function GroupsClient() {
         method: "PUT",
         body: JSON.stringify(g)
       });
-      setToast(`${t("groups.savedPrefix")} ${sevaTypeLabel(g.seva_type)} ${t("groups.group")} ${g.number}`);
+      const msg = `${t("groups.savedPrefix")} ${sevaTypeLabel(g.seva_type)} ${t("groups.group")} ${g.number}`;
+      setToast(msg);
+      setProgressStatus("success");
+      setProgressMessage(msg);
     } catch (e) {
-      setToast(e instanceof Error ? e.message : t("groups.saveFailed"));
+      const msg = e instanceof Error ? e.message : t("groups.saveFailed");
+      setToast(msg);
+      setProgressStatus("error");
+      setProgressMessage(msg);
     } finally {
       setBusy(null);
     }
   }
 
   async function reloadConfig() {
+    setProgressTitle(t("groups.reload"));
+    setProgressMessage(null);
+    setProgressStatus("loading");
+    setProgressOpen(true);
     setBusy("reload");
     setToast(null);
     try {
       await api<any>("/api/admin/v1/config/reload", { method: "POST" });
       await load();
-      setToast(t("groups.reloaded"));
+      const msg = t("groups.reloaded");
+      setToast(msg);
+      setProgressStatus("success");
+      setProgressMessage(msg);
     } catch (e) {
-      setToast(e instanceof Error ? e.message : t("groups.reloadFailed"));
+      const msg = e instanceof Error ? e.message : t("groups.reloadFailed");
+      setToast(msg);
+      setProgressStatus("error");
+      setProgressMessage(msg);
     } finally {
       setBusy(null);
     }
@@ -96,6 +121,13 @@ export function GroupsClient() {
 
   return (
     <div className="space-y-4">
+      <ProgressPopup
+        open={progressOpen}
+        title={progressTitle}
+        message={progressMessage}
+        status={progressStatus}
+        onClose={() => setProgressOpen(false)}
+      />
       <div className="rounded-2xl bg-panel/60 border border-black/10 shadow-soft p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -139,7 +171,7 @@ export function GroupsClient() {
       ) : error ? (
         <div className="text-sm text-danger">{error}</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {grouped.map(([sevaType, gl]) => (
             <div
               key={sevaType}
