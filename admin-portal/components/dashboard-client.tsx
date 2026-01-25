@@ -204,7 +204,7 @@ export function DashboardClient() {
                         <button
                           onClick={() => run({ kind: "send", sevaType: g.seva_type, groupNo: g.number })}
                           disabled={busy !== null}
-                          className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-xs font-medium hover:bg-brand/90 transition disabled:opacity-60"
+                          className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-3 text-sm font-semibold hover:bg-brand/90 transition disabled:opacity-60"
                         >
                           {busy === `send:${g.seva_type}:${g.number}` ? (
                             <SpinnerIcon className="h-4 w-4 animate-spin" />
@@ -216,7 +216,7 @@ export function DashboardClient() {
                         <button
                           onClick={() => run({ kind: "remind", sevaType: g.seva_type, groupNo: g.number })}
                           disabled={busy !== null}
-                          className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-xs font-medium hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
+                          className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-4 py-3 text-sm font-semibold hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
                         >
                           {busy === `remind:${g.seva_type}:${g.number}` ? (
                             <SpinnerIcon className="h-4 w-4 animate-spin" />
@@ -228,7 +228,7 @@ export function DashboardClient() {
                         <button
                           onClick={() => run({ kind: "announce", sevaType: g.seva_type, groupNo: g.number })}
                           disabled={busy !== null}
-                          className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-xs font-medium hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
+                          className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-4 py-3 text-sm font-semibold hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
                         >
                           {busy === `announce:${g.seva_type}:${g.number}` ? (
                             <SpinnerIcon className="h-4 w-4 animate-spin" />
@@ -239,7 +239,7 @@ export function DashboardClient() {
                         </button>
                         <Link
                           href={`/groups/${encodeURIComponent(g.seva_type)}/${g.number}/members`}
-                          className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-xs font-medium hover:bg-black/10 border border-black/10 transition"
+                          className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-4 py-3 text-sm font-semibold hover:bg-black/10 border border-black/10 transition"
                         >
                           {t("dashboard.editMembers")}
                         </Link>
