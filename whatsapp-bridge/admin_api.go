@@ -1,23 +1,82 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"whatsapp-client/config"
 	"whatsapp-client/domain"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 const adminConfigPath = "config/groups.yaml"
+
+const adminSessionCookieName = "admin_session"
+
+type adminSessionStore struct {
+	mu       sync.Mutex
+	sessions map[string]time.Time
+}
+
+func newAdminSessionStore() *adminSessionStore {
+	return &adminSessionStore{sessions: map[string]time.Time{}}
+}
+
+func (s *adminSessionStore) newSession(ttl time.Duration) (string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = 24 * time.Hour
+	}
+	raw := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, raw); err != nil {
+		return "", time.Time{}, err
+	}
+	return hex.EncodeToString(raw), time.Now().Add(ttl), nil
+}
+
+func (s *adminSessionStore) set(token string, exp time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sessions[token] = exp
+}
+
+func (s *adminSessionStore) delete(token string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.sessions, token)
+}
+
+func (s *adminSessionStore) valid(token string) bool {
+	if token == "" {
+		return false
+	}
+	now := time.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	exp, ok := s.sessions[token]
+	if !ok {
+		return false
+	}
+	if now.After(exp) {
+		delete(s.sessions, token)
+		return false
+	}
+	return true
+}
 
 type adminAPI struct {
 	bundle *ComponentsBundle
@@ -26,12 +85,178 @@ type adminAPI struct {
 
 	fileMu sync.Mutex
 	locks  map[string]*sync.Mutex
+
+	sessions *adminSessionStore
 }
 
 func newAdminAPI(bundle *ComponentsBundle) *adminAPI {
 	return &adminAPI{
 		bundle: bundle,
 		locks:  map[string]*sync.Mutex{},
+		sessions: newAdminSessionStore(),
+	}
+}
+
+func (a *adminAPI) adminSecret() []byte {
+	// Used to sign session tokens stored in cookies.
+	// This is NOT a replacement for secure random tokens, but prevents client-side token tampering.
+	s := os.Getenv("ADMIN_SESSION_SECRET")
+	if s == "" {
+		// Fallback keeps existing deployments working but is not ideal.
+		return []byte("default-admin-session-secret")
+	}
+	return []byte(s)
+}
+
+func (a *adminAPI) signToken(token string) string {
+	mac := hmac.New(sha256.New, a.adminSecret())
+	_, _ = mac.Write([]byte(token))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func (a *adminAPI) verifySignedToken(v string) (string, bool) {
+	parts := strings.SplitN(v, ".", 2)
+	if len(parts) != 2 {
+		return "", false
+	}
+	token := parts[0]
+	sig := parts[1]
+	if token == "" || sig == "" {
+		return "", false
+	}
+	expected := a.signToken(token)
+	if !hmac.Equal([]byte(expected), []byte(sig)) {
+		return "", false
+	}
+	return token, true
+}
+
+func (a *adminAPI) readSessionToken(r *http.Request) (string, bool) {
+	c, err := r.Cookie(adminSessionCookieName)
+	if err != nil || c == nil {
+		return "", false
+	}
+	return a.verifySignedToken(strings.TrimSpace(c.Value))
+}
+
+func (a *adminAPI) isLoggedIn(r *http.Request) bool {
+	token, ok := a.readSessionToken(r)
+	if !ok {
+		return false
+	}
+	return a.sessions.valid(token)
+}
+
+func (a *adminAPI) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if handleCORS(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	hash := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD_HASH"))
+	if hash == "" {
+		http.Error(w, "ADMIN_PASSWORD_HASH not set", http.StatusExpectationFailed)
+		return
+	}
+
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.Password) == "" {
+		http.Error(w, "password is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)); err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	token, exp, err := a.sessions.newSession(24 * time.Hour)
+	if err != nil {
+		http.Error(w, "failed to create session", http.StatusInternalServerError)
+		return
+	}
+	a.sessions.set(token, exp)
+
+	cookieValue := token + "." + a.signToken(token)
+	http.SetCookie(w, &http.Cookie{
+		Name:     adminSessionCookieName,
+		Value:    cookieValue,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false,
+		Expires:  exp,
+	})
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (a *adminAPI) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if handleCORS(w, r) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if token, ok := a.readSessionToken(r); ok {
+		a.sessions.delete(token)
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     adminSessionCookieName,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false,
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (a *adminAPI) handleMe(w http.ResponseWriter, r *http.Request) {
+	if handleCORS(w, r) {
+		return
+	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"authenticated": a.isLoggedIn(r)})
+}
+
+func (a *adminAPI) adminAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			next(w, r)
+			return
+		}
+		if a.isLoggedIn(r) {
+			next(w, r)
+			return
+		}
+
+		// Backward-compatible: allow API_KEY auth for non-browser clients.
+		apiKey := os.Getenv("API_KEY")
+		if apiKey != "" {
+			providedKey := r.Header.Get("Authorization")
+			if providedKey == "Bearer "+apiKey {
+				next(w, r)
+				return
+			}
+		}
+
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
 }
 
@@ -535,12 +760,16 @@ func (a *adminAPI) handleHealth(w http.ResponseWriter, r *http.Request) {
 func registerAdminHandlers(bundle *ComponentsBundle) {
 	api := newAdminAPI(bundle)
 
-	http.HandleFunc("/api/admin/v1/health", apiKeyMiddleware(api.handleHealth))
-	http.HandleFunc("/api/admin/v1/config", apiKeyMiddleware(api.handleConfig))
-	http.HandleFunc("/api/admin/v1/config/reload", apiKeyMiddleware(api.handleReloadConfig))
-	http.HandleFunc("/api/admin/v1/groups", apiKeyMiddleware(api.handleGroups))
-	http.HandleFunc("/api/admin/v1/groups/", apiKeyMiddleware(api.handleGroups))
-	http.HandleFunc("/api/admin/v1/members", apiKeyMiddleware(api.handleMembersDirectory))
+	http.HandleFunc("/api/admin/v1/auth/login", api.handleLogin)
+	http.HandleFunc("/api/admin/v1/auth/logout", api.handleLogout)
+	http.HandleFunc("/api/admin/v1/auth/me", api.handleMe)
+
+	http.HandleFunc("/api/admin/v1/health", api.adminAuthMiddleware(api.handleHealth))
+	http.HandleFunc("/api/admin/v1/config", api.adminAuthMiddleware(api.handleConfig))
+	http.HandleFunc("/api/admin/v1/config/reload", api.adminAuthMiddleware(api.handleReloadConfig))
+	http.HandleFunc("/api/admin/v1/groups", api.adminAuthMiddleware(api.handleGroups))
+	http.HandleFunc("/api/admin/v1/groups/", api.adminAuthMiddleware(api.handleGroups))
+	http.HandleFunc("/api/admin/v1/members", api.adminAuthMiddleware(api.handleMembersDirectory))
 }
 
 var marshalYAML = func(v any) ([]byte, error) {

@@ -35,6 +35,16 @@ export type GlobalMember = {
   }[];
 };
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/bridge${path}`, {
     ...init,
@@ -47,7 +57,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+    throw new ApiError(text || `Request failed: ${res.status}`, res.status);
   }
 
   return (await res.json()) as T;

@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, GlobalMember } from "@/lib/bridge";
+import { useRouter } from "next/navigation";
+import { api, ApiError, GlobalMember } from "@/lib/bridge";
 import { t, sevaTypeLabel } from "@/lib/strings";
 import { SearchIcon } from "@/components/devotional-icons";
 
 export function MembersClient() {
+  const router = useRouter();
   const [members, setMembers] = useState<GlobalMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,10 @@ export function MembersClient() {
         const data = await api<{ members: GlobalMember[] }>("/api/admin/v1/members");
         if (!cancelled) setMembers(data.members);
       } catch (e) {
+        if (e instanceof ApiError && e.status === 401) {
+          router.push("/login");
+          return;
+        }
         if (!cancelled) setError(e instanceof Error ? e.message : t("members.failedToLoad"));
       } finally {
         if (!cancelled) setLoading(false);

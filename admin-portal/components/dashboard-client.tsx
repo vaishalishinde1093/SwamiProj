@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, AdminGroup } from "@/lib/bridge";
+import { useRouter } from "next/navigation";
+import { api, AdminGroup, ApiError } from "@/lib/bridge";
 import { t, sevaTypeLabel } from "@/lib/strings";
 import { DeepakIcon, GhantaIcon, MandirIcon, SpinnerIcon, UsersIcon } from "@/components/devotional-icons";
 import { ProgressPopup } from "@/components/progress-popup";
@@ -39,6 +40,7 @@ function endpointFor(action: SevaAction): string {
 }
 
 export function DashboardClient() {
+  const router = useRouter();
   const [groups, setGroups] = useState<AdminGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +60,10 @@ export function DashboardClient() {
         const data = await api<{ groups: AdminGroup[] }>("/api/admin/v1/groups");
         if (!cancelled) setGroups(data.groups);
       } catch (e) {
+        if (e instanceof ApiError && e.status === 401) {
+          router.push("/login");
+          return;
+        }
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
         if (!cancelled) setLoading(false);

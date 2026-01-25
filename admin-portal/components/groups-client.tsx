@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, AdminGroup } from "@/lib/bridge";
+import { useRouter } from "next/navigation";
+import { api, AdminGroup, ApiError } from "@/lib/bridge";
 import { t, sevaTypeLabel } from "@/lib/strings";
 import { RefreshIcon, SaveIcon, SpinnerIcon } from "@/components/devotional-icons";
 import { ProgressPopup } from "@/components/progress-popup";
 
 export function GroupsClient() {
+  const router = useRouter();
   const [groups, setGroups] = useState<AdminGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +34,10 @@ export function GroupsClient() {
       const data = await api<{ groups: AdminGroup[]; hash?: string }>("/api/admin/v1/groups");
       setGroups(data.groups);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        router.push("/login");
+        return;
+      }
       setError(e instanceof Error ? e.message : t("groups.failedToLoad"));
     } finally {
       setLoading(false);

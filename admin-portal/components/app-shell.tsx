@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { t } from "@/lib/strings";
 import { DeepakIcon, MandirIcon, OmIcon } from "@/components/devotional-icons";
+import { LogoutButton } from "@/components/auth-client";
 import swamiBg from "../public/swami-bg.jpg";
 
 const nav = [
@@ -11,6 +15,8 @@ const nav = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <div className="min-h-screen relative">
       <div className="fixed inset-0 -z-10">
@@ -53,6 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {n.label}
               </Link>
             ))}
+            {pathname === "/login" ? null : <LogoutButton />}
           </div>
         </div>
 

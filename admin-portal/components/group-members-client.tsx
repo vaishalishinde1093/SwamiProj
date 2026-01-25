@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, GroupMembersResponse, Member } from "@/lib/bridge";
+import { useRouter } from "next/navigation";
+import { api, ApiError, GroupMembersResponse, Member } from "@/lib/bridge";
 import { t, sevaTypeLabel } from "@/lib/strings";
 import { BackIcon, PlusIcon, SaveIcon, TrashIcon } from "@/components/devotional-icons";
 import { ProgressPopup } from "@/components/progress-popup";
 
 export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; groupNo: number }) {
+  const router = useRouter();
   const [data, setData] = useState<GroupMembersResponse | null>(null);
   const [draft, setDraft] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,10 @@ export function GroupMembersClient({ sevaType, groupNo }: { sevaType: string; gr
       setData(d);
       setDraft(d.members);
     } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        router.push("/login");
+        return;
+      }
       setToast(e instanceof Error ? e.message : t("groupMembers.failedToLoad"));
     } finally {
       setLoading(false);

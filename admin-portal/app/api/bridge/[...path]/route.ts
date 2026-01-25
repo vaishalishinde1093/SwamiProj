@@ -43,9 +43,19 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
   const search = req.nextUrl.searchParams;
   search.forEach((v, k) => url.searchParams.set(k, v));
 
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey}`
-  };
+  const headers: Record<string, string> = {};
+
+  // Forward browser cookies (admin session).
+  const cookie = req.headers.get("cookie");
+  if (cookie) {
+    headers.Cookie = cookie;
+  }
+
+  // Only attach API key for non-admin endpoints.
+  // Otherwise, the admin portal would be implicitly authorized without login.
+  if (!pathname.startsWith("api/admin/v1/")) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
 
   const contentType = req.headers.get("content-type");
   if (contentType) {
@@ -82,11 +92,18 @@ async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
 
   const upstreamBody = await upstream.arrayBuffer();
 
+  const outHeaders: Record<string, string> = {
+    "Content-Type": upstream.headers.get("content-type") ?? "application/json"
+  };
+
+  const setCookie = upstream.headers.get("set-cookie");
+  if (setCookie) {
+    outHeaders["Set-Cookie"] = setCookie;
+  }
+
   return new Response(upstreamBody, {
     status: upstream.status,
-    headers: {
-      "Content-Type": upstream.headers.get("content-type") ?? "application/json"
-    }
+    headers: outHeaders
   });
 }
 
