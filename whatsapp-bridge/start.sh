@@ -8,4 +8,8 @@ export PORT="${PORT:-8081}"
 # - POSTGRES_DSN
 # - API_KEY
 
+: "${API_KEY:?API_KEY is required}"
+: "${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH is required}"
+: "${ADMIN_SESSION_SECRET:?ADMIN_SESSION_SECRET is required}"
+
 exec ./app
