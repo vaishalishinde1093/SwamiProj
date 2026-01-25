@@ -20,6 +20,8 @@ import (
 	"time"
 	"runtime"
 
+	"whatsapp-client/repository"
+
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -104,10 +106,15 @@ type Message struct {
 
 // Database handler for storing message history
 type MessageStore struct {
-	db *sql.DB
+	db          *sql.DB
+	pollDB      *sql.DB
+	pollDialect string
 }
 
 func (store *MessageStore) Close() error {
+	if store.pollDB != nil && store.pollDB != store.db {
+		_ = store.pollDB.Close()
+	}
 	return store.db.Close()
 }
 
@@ -203,7 +210,25 @@ func NewMessageStore() (*MessageStore, error) {
 		return nil, fmt.Errorf("failed to create tables: %w", err)
 	}
 
-	return &MessageStore{db: db}, nil
+	store := &MessageStore{db: db, pollDB: db, pollDialect: "sqlite"}
+	if os.Getenv("POSTGRES_DSN") != "" {
+		pollDB, err := repository.OpenPostgresFromEnv()
+		if err != nil {
+			return nil, err
+		}
+		if err := pollDB.Ping(); err != nil {
+			_ = pollDB.Close()
+			return nil, fmt.Errorf("failed to ping postgres: %w", err)
+		}
+		if err := ensurePostgresPollSchema(context.Background(), pollDB); err != nil {
+			_ = pollDB.Close()
+			return nil, fmt.Errorf("failed to ensure postgres poll schema: %w", err)
+		}
+		store.pollDB = pollDB
+		store.pollDialect = "postgres"
+	}
+
+	return store, nil
 }
 
 // Store a chat in the database
@@ -555,7 +580,6 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 				voterName = msg.Info.Sender.User
 			}
 			pollMessageID := pollKey.GetId()
-			chatJID := msg.Info.Chat.String()
 			voterJID := msg.Info.Sender.String()
 			voterUser := msg.Info.Sender.User
 
@@ -571,7 +595,7 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 				logger.Warnf("Failed to decrypt poll vote: %v", err)
 			} else if pollVote != nil {
 				selectedHashes := pollVote.GetSelectedOptions()
-				logger.Infof("Decrypted %d selected option hashes", len(selectedHashes))
+				logger.Debugf("Decrypted %d selected option hashes", len(selectedHashes))
 
 				//retrive origina poll data to match hashes
 				_, pollOptions, err := messageStore.GetPollData(pollMessageID)
@@ -582,59 +606,57 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 
 					// Match selected hashes with original poll options
 					votedOptionNames = matchPollOptions(selectedHashes, pollOptions)
-					logger.Infof("Matched %d voted options: %v", len(votedOptionNames), votedOptionNames)
+					logger.Debugf("Matched %d voted options: %v", len(votedOptionNames), votedOptionNames)
 
 					// Store the vote with option names
 					err = messageStore.StorePollVote(pollMessageID, voterUser, votedOptionNames)
 					if err != nil {
 						logger.Warnf("Failed to store poll vote: %v", err)
 					} else {
-						logger.Infof("Poll vote stored: %s voted for %v on poll %s", voterName, votedOptionNames, pollMessageID)
+						logger.Debugf("Poll vote stored: %s voted for %v on poll %s", voterName, votedOptionNames, pollMessageID)
 					}
 				}
 			}
 
-			// Store poll vote as a special message type (for backwards compatibility)
-			err = messageStore.StoreMessage(
-				msg.Info.ID,
-				chatJID,
-				voterUser,
-				fmt.Sprintf("POLL_VOTE:%v:%v", pollMessageID, votedOptionNames), // Include voted names
-				msg.Info.Timestamp,
-				false,       // Poll votes are never from "me"
-				"poll_vote", // Special media type
-				"",
-				"",
-				nil,
-				nil,
-				nil,
-				0,
-			)
-			if err != nil {
-				logger.Warnf("Failed to store poll vote message: %v", err)
-			}
+			// err = messageStore.StoreMessage(
+			// 	msg.Info.ID,
+			// 	chatJID,
+			// 	voterUser,
+			// 	fmt.Sprintf("POLL_VOTE:%v:%v", pollMessageID, votedOptionNames), // Include voted names
+			// 	msg.Info.Timestamp,
+			// 	false,       // Poll votes are never from "me"
+			// 	"poll_vote", // Special media type
+			// 	"",
+			// 	"",
+			// 	nil,
+			// 	nil,
+			// 	nil,
+			// 	0,
+			// )
+			// if err != nil {
+			// 	logger.Warnf("Failed to store poll vote message: %v", err)
+			// }
 			// Don't process further - poll votes don't have regular content
 			return
 		}
 
 		// Save message to database
-		chatJID := msg.Info.Chat.String()
+		_ = msg.Info.Chat.String()
 		sender := msg.Info.Sender.User
 
-		// Get appropriate chat name (pass nil for conversation since we don't have one for regular messages)
-		name := GetChatName(client, messageStore, msg.Info.Chat, chatJID, nil, sender, logger)
+		// name := GetChatName(client, messageStore, msg.Info.Chat, chatJID, nil, sender, logger)
 
 		// Update chat in database with the message timestamp (keeps last message time updated)
-		err := messageStore.StoreChat(chatJID, name, msg.Info.Timestamp)
-		if err != nil {
-			logger.Warnf("Failed to store chat: %v", err)
-		}
+		// err := messageStore.StoreChat(chatJID, name, msg.Info.Timestamp)
+		// if err != nil {
+		// 	logger.Warnf("Failed to store chat: %v", err)
+		// }
 
 		// Extract text content
 		content := extractTextContent(msg.Message)
 
 		// Extract media info
-		mediaType, filename, url, mediaKey, fileSHA256, fileEncSHA256, fileLength := extractMediaInfo(msg.Message)
+		mediaType, filename, url, _, _, _, _ := extractMediaInfo(msg.Message)
 
 		// Skip if there's no content and no media
 		if content == "" && mediaType == "" {
@@ -642,36 +664,36 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 		}
 
 		// Store message in database
-		err = messageStore.StoreMessage(
-			msg.Info.ID,
-			chatJID,
-			sender,
-			content,
-			msg.Info.Timestamp,
-			msg.Info.IsFromMe,
-			mediaType,
-			filename,
-			url,
-			mediaKey,
-			fileSHA256,
-			fileEncSHA256,
-			fileLength,
-		)
-		if err != nil {
-			logger.Warnf("Failed to store message: %v", err)
-		} else {
-			// Log message reception
-			timestamp := msg.Info.Timestamp.Format("2006-01-02 15:04:05")
-			direction := "<-"
-			if msg.Info.IsFromMe {
-				direction = "->"
-			}
-			// Log based on message type
-			logger.Infof(
-				"%s | %s | %s | %s | %s | %s | %s",
-				timestamp, direction, sender, mediaType, filename, url, content,
-			)
+		// err = messageStore.StoreMessage(
+		// 	msg.Info.ID,
+		// 	chatJID,
+		// 	sender,
+		// 	content,
+		// 	msg.Info.Timestamp,
+		// 	msg.Info.IsFromMe,
+		// 	mediaType,
+		// 	filename,
+		// 	url,
+		// 	mediaKey,
+		// 	fileSHA256,
+		// 	fileEncSHA256,
+		// 	fileLength,
+		// )
+		// if err != nil {
+		// 	logger.Warnf("Failed to store message: %v", err)
+		// }
+
+		// Log message reception
+		timestamp := msg.Info.Timestamp.Format("2006-01-02 15:04:05")
+		direction := "<-"
+		if msg.Info.IsFromMe {
+			direction = "->"
 		}
+		// Log based on message type
+		logger.Debugf(
+			"%s | %s | %s | %s | %s | %s | %s",
+			timestamp, direction, sender, mediaType, filename, url, content,
+		)
 	}
 }
 
@@ -686,20 +708,43 @@ func (store *MessageStore) StorePollData(pollID string, pollName string, chatJID
 	if err != nil {
 		return fmt.Errorf("failed to marshal poll options: %w", err)
 	}
-	_, err = store.db.Exec(
-		`INSERT OR REPLACE INTO poll_data (poll_id, poll_name, chat_jid, poll_options)
-            VALUES (?, ?, ?, ?)`,
-		pollID, pollName, chatJID, string(optionsJSON),
-	)
-	return err
+
+	switch store.pollDialect {
+	case "postgres":
+		_, err = store.pollDB.Exec(
+			`INSERT INTO poll_data (poll_id, poll_name, chat_jid, poll_options)
+			 VALUES ($1, $2, $3, $4::jsonb)
+			 ON CONFLICT (poll_id) DO UPDATE SET
+			 	poll_name = EXCLUDED.poll_name,
+			 	chat_jid = EXCLUDED.chat_jid,
+			 	poll_options = EXCLUDED.poll_options,
+			 	timestamp = now()`,
+			pollID, pollName, chatJID, string(optionsJSON),
+		)
+		return err
+	default:
+		_, err = store.pollDB.Exec(
+			`INSERT OR REPLACE INTO poll_data (poll_id, poll_name, chat_jid, poll_options)
+			 VALUES (?, ?, ?, ?)`,
+			pollID, pollName, chatJID, string(optionsJSON),
+		)
+		return err
+	}
 }
 
 // GetPollData retrieves poll creation information
 func (store *MessageStore) GetPollData(pollID string) (pollName string, pollOptions []string, err error) {
 	var optionsJSON string
-	err = store.db.QueryRow(
-		`SELECT poll_name, poll_options FROM poll_data WHERE poll_id = ?`, pollID,
-	).Scan(&pollName, &optionsJSON)
+	switch store.pollDialect {
+	case "postgres":
+		err = store.pollDB.QueryRow(
+			`SELECT poll_name, poll_options::text FROM poll_data WHERE poll_id = $1`, pollID,
+		).Scan(&pollName, &optionsJSON)
+	default:
+		err = store.pollDB.QueryRow(
+			`SELECT poll_name, poll_options FROM poll_data WHERE poll_id = ?`, pollID,
+		).Scan(&pollName, &optionsJSON)
+	}
 	if err != nil {
 		return "", nil, err
 	}
@@ -717,17 +762,59 @@ func (store *MessageStore) StorePollVote(pollID, voterJID string, votedOptionNam
 	if err != nil {
 		return fmt.Errorf("failed to marshal voted options: %w", err)
 	}
-	_, err = store.db.Exec(
-		`INSERT OR REPLACE INTO poll_votes (poll_id, voter_jid, voted_option_names)
-            VALUES (?, ?, ?)`,
-		pollID, voterJID, string(optionsJSON),
-	)
-	return err
+
+	switch store.pollDialect {
+	case "postgres":
+		_, err = store.pollDB.Exec(
+			`INSERT INTO poll_votes (poll_id, voter_jid, voted_option_names)
+			 VALUES ($1, $2, $3::jsonb)
+			 ON CONFLICT (poll_id, voter_jid) DO UPDATE SET
+			 	voted_option_names = EXCLUDED.voted_option_names,
+			 	timestamp = now()`,
+			pollID, voterJID, string(optionsJSON),
+		)
+		return err
+	default:
+		_, err = store.pollDB.Exec(
+			`INSERT OR REPLACE INTO poll_votes (poll_id, voter_jid, voted_option_names)
+			 VALUES (?, ?, ?)`,
+			pollID, voterJID, string(optionsJSON),
+		)
+		return err
+	}
 }
 
-// Start a REST API server to expose the WhatsApp client functionality
+func ensurePostgresPollSchema(ctx context.Context, db *sql.DB) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS poll_data (
+			poll_id TEXT PRIMARY KEY,
+			poll_name TEXT NOT NULL,
+			chat_jid TEXT NOT NULL,
+			poll_options JSONB NOT NULL,
+			timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_poll_data_chat_jid ON poll_data(chat_jid)`,
+		`CREATE INDEX IF NOT EXISTS idx_poll_data_chat_jid_ts ON poll_data(chat_jid, timestamp DESC)`,
+		`CREATE TABLE IF NOT EXISTS poll_votes (
+			poll_id TEXT NOT NULL,
+			voter_jid TEXT NOT NULL,
+			voted_option_names JSONB NOT NULL,
+			timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
+			PRIMARY KEY (poll_id, voter_jid),
+			FOREIGN KEY (poll_id) REFERENCES poll_data(poll_id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_id ON poll_votes(poll_id)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := db.ExecContext(ctx, stmt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port int) {
-	serverAddr := fmt.Sprintf(":%d", port)
+	serverAddr := fmt.Sprintf("0.0.0.0:%d", port)
 
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -833,11 +920,15 @@ func main() {
 	}
 
 	// Set up logger
-	logger := waLog.Stdout("Client", "DEBUG", true)
+	level := strings.TrimSpace(os.Getenv("LOG_LEVEL"))
+	if level == "" {
+		level = "INFO"
+	}
+	logger := waLog.Stdout("Client", level, true)
 	logger.Infof("Starting WhatsApp Client...")
 
 	// Create database connection for storing session data
-	dbLog := waLog.Stdout("Database", "DEBUG", true)
+	dbLog := waLog.Stdout("Database", level, true)
 
 	// Create directory for database if it doesn't exist
 	if err := os.MkdirAll("store", 0755); err != nil {
