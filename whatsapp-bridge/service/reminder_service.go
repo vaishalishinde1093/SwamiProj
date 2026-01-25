@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"whatsapp-client/config"
@@ -17,6 +18,9 @@ type ReminderService struct {
 	whatsappSvc  WhatsAppClient
 	config       *config.Config
 	messageStore MessageStore
+
+	mu                   sync.Mutex
+	completionAnnouncedBy map[string]string
 }
 
 // NewReminderService creates a new reminder service
@@ -31,6 +35,7 @@ func NewReminderService(
 		whatsappSvc:  whatsappSvc,
 		config:       cfg,
 		messageStore: msgStore,
+		completionAnnouncedBy: make(map[string]string),
 	}
 }
 
@@ -378,7 +383,30 @@ func (rs *ReminderService) SendGroupAnnouncement(sevaType domain.SevaType, group
 	nonCompletedMembers := rs.findMembersNotCompleted(allMembers, completedMemberNames)
 	log.Printf("⚡ Identified %d members who haven't completed seva", len(nonCompletedMembers))
 	if len(nonCompletedMembers) == 0 {
-		return "", nil
+		completionMessage := rs.buildCompletionMessage(sevaType)
+		if completionMessage == "" {
+			return "", nil
+		}
+
+		todayKey := time.Now().Format("2006-01-02")
+		announceKey := fmt.Sprintf("%s:%d", sevaType, groupNo)
+
+		rs.mu.Lock()
+		alreadyAnnouncedOn, alreadyAnnounced := rs.completionAnnouncedBy[announceKey]
+		if alreadyAnnounced && alreadyAnnouncedOn == todayKey {
+			rs.mu.Unlock()
+			log.Printf("✅ Completion already announced today for %s group %d", sevaType, groupNo)
+			return "", nil
+		}
+		rs.completionAnnouncedBy[announceKey] = todayKey
+		rs.mu.Unlock()
+
+		success, statusMsg := rs.whatsappSvc.SendMessage(groupConfig.JID, completionMessage, "")
+		if !success {
+			return "", fmt.Errorf("failed to send completion message: %s", statusMsg)
+		}
+		log.Printf("✅ Completion announcement sent successfully")
+		return completionMessage, nil
 	}
 
 	// Build list of member names
@@ -399,4 +427,19 @@ func (rs *ReminderService) SendGroupAnnouncement(sevaType domain.SevaType, group
 
 	log.Printf("✅ Group announcement sent: %d members pending", len(nonCompletedMembers))
 	return message, nil
+}
+
+func (rs *ReminderService) buildCompletionMessage(sevaType domain.SevaType) string {
+	switch sevaType {
+	case domain.SevaTypeMalhari:
+		return "🙏 येळकोट येळकोट जय मल्हार सदानंदाचा येळकोट🙏\nआजची आपली रविवारची साप्ताहिक सेवा श्री खंडेराव महाराजांच्या कृपाशीर्वादाने व आपल्या सर्वांच्या सहकार्याने पूर्ण झालेली आहे.🙏🤝👍"
+	case domain.SevaTypeSaptahikSwami:
+		return "🙏 श्री स्वामी समर्थ🙏\nआजची आपली गुरूवारची साप्ताहिक स्वामी सेवा आपले स्वामी महाराजांच्या कृपाशीर्वादाने व आपल्या सर्वांच्या सहकार्याने पूर्ण झालेली आहे.🙏🙏🙏"
+	case domain.SevaTypeDarbar:
+		return "🙏 उदयोस्तु,  श्रीमहाकाली,महालक्ष्मी ,महासरस्वती, राजराजेश्वरी, आईसाहेब, श्री आंबा माता की जय🙏\n आजची आपली मंगळवारची साप्ताहिक सेवा आई साहेबांच्या कृपा आशीर्वादाने आपल्या सर्वांचे सहकार्य पूर्ण झालेली आहे.🙏🤝😊"
+	case domain.SevaTypeEkadashiBhagavat:
+		return "🙏 श्री स्वामी समर्थ🙏\n🙏ओम नमो भगवते वासुदेवाय 🙏\nआजची आपली एकादशीची सेवा श्री स्वामी महाराजांच्या कृपा आशीर्वादाने व आपल्या सर्वांच्या सहकार्याने पूर्ण झालेली आहे.💐🤝🙏👌👍🙏"
+	default:
+		return ""
+	}
 }
