@@ -866,6 +866,52 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		registerAdminHandlers(componentsBundle)
 	}
 
+	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		
+		qrCode, _, timestamp := qrState.GetQRCode()
+		status := map[string]interface{}{
+			"connected": client.IsConnected(),
+			"logged_in": client.IsLoggedIn(),
+			"has_qr_code": qrCode != "",
+			"qr_timestamp": timestamp,
+			"qr_age_seconds": 0,
+		}
+		
+		if !timestamp.IsZero() {
+			status["qr_age_seconds"] = int(time.Since(timestamp).Seconds())
+		}
+		
+		json.NewEncoder(w).Encode(status)
+	})
+
+	http.HandleFunc("/qr-generate", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		
+		// Check if client is already logged in
+		if client.IsLoggedIn() {
+			w.Write([]byte(`{"status": "already_logged_in", "message": "Client is already logged in"}`))
+			return
+		}
+		
+		// Force disconnect and reconnect to generate new QR code
+		if client.IsConnected() {
+			client.Disconnect()
+			time.Sleep(1 * time.Second)
+		}
+		
+		// Start the connection process in a goroutine
+		go func() {
+			err := client.Connect()
+			if err != nil {
+				log.Printf("Failed to connect: %v", err)
+				return
+			}
+		}()
+		
+		w.Write([]byte(`{"status": "generating", "message": "QR code generation started. Check /qr-terminal in 2-3 seconds."}`))
+	})
+
 	http.HandleFunc("/qr-terminal", func(w http.ResponseWriter, r *http.Request) {
 		qrCode, _, _ := qrState.GetQRCode()
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -1077,16 +1123,16 @@ func main() {
 	logger.Infof("Starting WhatsApp Client...")
 
 	// Create database connection for storing session data
-	dbLog := waLog.Stdout("Database", level, true)
 
 	// Create directory for database if it doesn't exist
 	if err := os.MkdirAll("store", 0755); err != nil {
 		logger.Errorf("Failed to create store directory: %v", err)
 	}
 
-	container, err := sqlstore.New(context.Background(), "sqlite3", "file:store/whatsapp.db?_foreign_keys=on", dbLog)
+	// Initialize SQLite database with proper connection pooling
+	container, err := sqlstore.New(context.Background(), "sqlite3", "file:store/whatsapp.db?_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL", waLog.Stdout("sqlstore", "INFO", true))
 	if err != nil {
-		logger.Errorf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to create SQL store: %v", err)
 	}
 
 	// Get device store - This contains session information
