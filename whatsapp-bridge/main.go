@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/sha256"
 	"database/sql"
@@ -32,7 +33,15 @@ import (
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
 	"rsc.io/qr"
+	"github.com/mdp/qrterminal"
 )
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
 
 // API key validation middleware
 func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -75,6 +84,14 @@ func (q *QRCodeState) SetQRCode(code string) {
 	q.qrCode = code
 	q.timestamp = time.Now()
 	q.isLoggedIn = false
+	
+	// Print QR code to terminal
+	fmt.Println("\n" + strings.Repeat("=", 60))
+	fmt.Println("📱 WHATSAPP QR CODE - Scan with your phone:")
+	fmt.Println(strings.Repeat("=", 60))
+	qrterminal.GenerateHalfBlock(code, qrterminal.L, os.Stdout)
+	fmt.Println(strings.Repeat("=", 60))
+	fmt.Printf("QR Code expires in 3 minutes\nScan with iOS or Android WhatsApp app\n\n")
 }
 
 // mark as logged in
@@ -849,6 +866,133 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		registerAdminHandlers(componentsBundle)
 	}
 
+	http.HandleFunc("/qr-terminal", func(w http.ResponseWriter, r *http.Request) {
+		qrCode, _, _ := qrState.GetQRCode()
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if qrCode == "" {
+			w.Write([]byte("No QR code available"))
+			return
+		}
+		
+		// Generate QR code as ASCII art for web display
+		var buf strings.Builder
+		buf.WriteString("\n" + strings.Repeat("=", 60) + "\n")
+		buf.WriteString("📱 WHATSAPP QR CODE - Scan with your phone:\n")
+		buf.WriteString(strings.Repeat("=", 60) + "\n")
+		
+		// Capture qrterminal output
+		oldStdout := os.Stdout
+		pr, pw, _ := os.Pipe()
+		os.Stdout = pw
+		
+		qrterminal.GenerateHalfBlock(qrCode, qrterminal.L, pw)
+		pw.Close()
+		
+		os.Stdout = oldStdout
+		
+		// Read from pipe and write to response
+		scanner := bufio.NewScanner(pr)
+		for scanner.Scan() {
+			buf.WriteString(scanner.Text() + "\n")
+		}
+		
+		buf.WriteString(strings.Repeat("=", 60) + "\n")
+		buf.WriteString("QR Code expires in 3 minutes\n")
+		buf.WriteString("Scan with iOS or Android WhatsApp app\n\n")
+		
+		w.Write([]byte(buf.String()))
+	})
+
+	http.HandleFunc("/qr-raw", func(w http.ResponseWriter, r *http.Request) {
+		qrCode, _, _ := qrState.GetQRCode()
+		w.Header().Set("Content-Type", "text/plain")
+		if qrCode == "" {
+			w.Write([]byte("No QR code available"))
+			return
+		}
+		// Return the raw QR code content
+		w.Write([]byte(qrCode))
+	})
+
+	http.HandleFunc("/qr-debug", func(w http.ResponseWriter, r *http.Request) {
+		qrCode, _, _ := qrState.GetQRCode()
+		w.Header().Set("Content-Type", "text/plain")
+		if qrCode == "" {
+			w.Write([]byte("No QR code available"))
+			return
+		}
+		w.Write([]byte(fmt.Sprintf("QR Code (%d chars): %s\nUser-Agent: %s\nIsAndroid: %v", 
+			len(qrCode), qrCode, r.Header.Get("User-Agent"), 
+			strings.Contains(strings.ToLower(r.Header.Get("User-Agent")), "android"))))
+	})
+
+	http.HandleFunc("/login-android", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		qrCode, isLoggedIn, timestamp := qrState.GetQRCode()
+
+		//if already logged in
+		if isLoggedIn {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":    "already_logged_in",
+				"message":   "WhatsApp is already connected",
+				"connected": client.IsConnected(),
+			})
+			return
+		}
+
+		//if QR code is not avaialble
+		if qrCode == "" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "waiting",
+				"message": "waiting for QR code generation, please try again in a moment",
+			})
+			return
+		}
+
+		if time.Since(timestamp) > 3*time.Minute {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "expired",
+				"message": "QR code has expired. please restart the application",
+			})
+			return
+		}
+
+		// Try different formats for Android
+		formats := []string{
+			qrCode,                           // Original
+			"WA:" + qrCode,                   // With WA: prefix
+			strings.Replace(qrCode, ",", "", -1), // Remove commas
+			"2," + qrCode,                   // Add prefix
+		}
+
+		for i, format := range formats {
+			log.Printf("Trying Android format %d: %s...", i+1, format[:min(50, len(format))])
+			qrCodeImg, err := qr.Encode(format, qr.M)
+			if err != nil {
+				continue
+			}
+
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("X-Android-Format", fmt.Sprintf("%d", i+1))
+
+			png.Encode(w, qrCodeImg.Image())
+			return
+		}
+
+		http.Error(w, "Failed to generate QR code in any format", http.StatusInternalServerError)
+	})
+
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -887,8 +1031,11 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 			return
 		}
 
-		// Generate QR code
-		qrCodeImg, err := qr.Encode(qrCode, qr.L)
+		// Generate QR code - use simpler approach for Android compatibility
+		log.Printf("Generating QR code with %d characters", len(qrCode))
+		
+		// Use the original QR code without any modifications
+		qrCodeImg, err := qr.Encode(qrCode, qr.M) // Use medium error correction instead of high
 		if err != nil {
 			http.Error(w, "Failed to generate QR code image", http.StatusInternalServerError)
 			return
@@ -898,6 +1045,8 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "User-Agent")
 
 		png.Encode(w, qrCodeImg.Image())
 	})
