@@ -1086,7 +1086,7 @@ func main() {
 			select {
 			case <-connectedChan:
 				fmt.Println("Successfully connected and authenticated!")
-			case <-time.After(1 * time.Minute):
+			case <-time.After(5 * time.Minute):
 				logger.Errorf("Timeout waiting for QR code scan!")
 				return
 			}
