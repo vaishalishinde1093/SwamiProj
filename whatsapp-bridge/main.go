@@ -1004,7 +1004,7 @@ func main() {
 			pairPhone := strings.TrimSpace(os.Getenv("WHATSAPP_PAIR_PHONE"))
 			pairMethod := strings.ToLower(strings.TrimSpace(os.Getenv("WHATSAPP_PAIR_METHOD")))
 			if pairMethod == "" {
-				pairMethod = "phone"
+				pairMethod = "qr"
 			}
 
 			// No ID stored, this is a new client, need to pair with phone
@@ -1018,7 +1018,11 @@ func main() {
 
 			if pairMethod == "phone" {
 				select {
-				case <-qrChan:
+				case evt := <-qrChan:
+					if evt.Event == "code" {
+						qrState.SetQRCode(evt.Code)
+						logger.Infof("QR Code for WhatsApp pairing: %s", evt.Code)
+					}
 				case <-time.After(15 * time.Second):
 					logger.Warnf("Timeout waiting for initial login webscoket")
 				}
@@ -1047,7 +1051,10 @@ func main() {
 
 				logger.Warnf("\n phone number pairing enabled with code %s", code)
 				for evt := range qrChan {
-					if evt.Event == "success" {
+					if evt.Event == "code" {
+						qrState.SetQRCode(evt.Code)
+						logger.Infof("QR Code for WhatsApp pairing: %s", evt.Code)
+					} else if evt.Event == "success" {
 						connectedChan <- true
 						break
 					} else if evt.Event == "error" {
@@ -1055,6 +1062,24 @@ func main() {
 						return
 					}
 				}
+			}
+
+			// If not using phone pairing, listen for QR codes
+			if pairMethod != "phone" {
+				go func() {
+					for evt := range qrChan {
+						if evt.Event == "code" {
+							qrState.SetQRCode(evt.Code)
+							logger.Infof("QR Code for WhatsApp pairing: %s", evt.Code)
+						} else if evt.Event == "success" {
+							connectedChan <- true
+							break
+						} else if evt.Event == "error" {
+							logger.Errorf("QR error: %v", evt.Error)
+							return
+						}
+					}
+				}()
 			}
 
 			// Wait for connection
