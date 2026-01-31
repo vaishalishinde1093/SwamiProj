@@ -596,7 +596,7 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 			if voterName == "" {
 				voterName = msg.Info.Sender.User
 			}
-			pollMessageID := pollKey.GetId()
+			pollMessageID := pollKey.GetID()
 			voterJID := msg.Info.Sender.String()
 			voterUser := msg.Info.Sender.User
 
