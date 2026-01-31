@@ -12,4 +12,4 @@ export PORT="${PORT:-8081}"
 : "${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH is required}"
 : "${ADMIN_SESSION_SECRET:?ADMIN_SESSION_SECRET is required}"
 
-exec ./app
+exec ./app IMPORT_MEMBERS=1
