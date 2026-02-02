@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1124,13 +1125,17 @@ func main() {
 
 	// Create database connection for storing session data
 
-	// Create directory for database if it doesn't exist
-	if err := os.MkdirAll("store", 0755); err != nil {
+	sqlitePath := strings.TrimSpace(os.Getenv("WHATSAPP_SQLITE_PATH"))
+	if sqlitePath == "" {
+		sqlitePath = "store/whatsapp.db"
+	}
+
+	if err := os.MkdirAll(filepath.Dir(sqlitePath), 0755); err != nil {
 		logger.Errorf("Failed to create store directory: %v", err)
 	}
 
-	// Initialize SQLite database with proper connection pooling
-	container, err := sqlstore.New(context.Background(), "sqlite3", "file:store/whatsapp.db?_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL", waLog.Stdout("sqlstore", "INFO", true))
+	sqliteDSN := fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL", sqlitePath)
+	container, err := sqlstore.New(context.Background(), "sqlite3", sqliteDSN, waLog.Stdout("sqlstore", "INFO", true))
 	if err != nil {
 		log.Fatalf("Failed to create SQL store: %v", err)
 	}
