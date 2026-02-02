@@ -298,6 +298,12 @@ groups:
       csv_path: "Darbar/durga_paath_group_19.csv"
       max_adhyas: 13
       max_poll_size: 12
+    - number: 20
+      jid: "120363403563940712@g.us"
+      name: "दरबार - 20 श्री दुर्गा सप्तशती"
+      csv_path: "Darbar/durga_paath_group_20.csv"
+      max_adhyas: 13
+      max_poll_size: 12
     - number: 95
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST Darbar"
