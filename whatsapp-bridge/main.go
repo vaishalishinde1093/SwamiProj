@@ -24,6 +24,7 @@ import (
 
 	"whatsapp-client/repository"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -1124,18 +1125,35 @@ func main() {
 	logger.Infof("Starting WhatsApp Client...")
 
 	// Create database connection for storing session data
-
-	sqlitePath := strings.TrimSpace(os.Getenv("WHATSAPP_SQLITE_PATH"))
-	if sqlitePath == "" {
-		sqlitePath = "store/whatsapp.db"
+	//
+	// For persistent logins across redeploys on Railway, prefer a persistent SQL store:
+	// - Set WHATSAPP_STORE_DSN to use Postgres (recommended)
+	// - Otherwise, falls back to SQLite file (use a Railway Volume if you want persistence)
+	storeDSN := strings.TrimSpace(os.Getenv("WHATSAPP_STORE_DSN"))
+	if storeDSN == "" {
+		storeDSN = strings.TrimSpace(os.Getenv("POSTGRES_DSN"))
 	}
 
-	if err := os.MkdirAll(filepath.Dir(sqlitePath), 0755); err != nil {
-		logger.Errorf("Failed to create store directory: %v", err)
-	}
+	var (
+		container *sqlstore.Container
+		err       error
+	)
 
-	sqliteDSN := fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL", sqlitePath)
-	container, err := sqlstore.New(context.Background(), "sqlite3", sqliteDSN, waLog.Stdout("sqlstore", "INFO", true))
+	if storeDSN != "" {
+		container, err = sqlstore.New(context.Background(), "pgx", storeDSN, waLog.Stdout("sqlstore", "INFO", true))
+	} else {
+		sqlitePath := strings.TrimSpace(os.Getenv("WHATSAPP_SQLITE_PATH"))
+		if sqlitePath == "" {
+			sqlitePath = "store/whatsapp.db"
+		}
+
+		if err := os.MkdirAll(filepath.Dir(sqlitePath), 0755); err != nil {
+			logger.Errorf("Failed to create store directory: %v", err)
+		}
+
+		sqliteDSN := fmt.Sprintf("file:%s?_foreign_keys=on&_journal_mode=WAL&_synchronous=NORMAL", sqlitePath)
+		container, err = sqlstore.New(context.Background(), "sqlite3", sqliteDSN, waLog.Stdout("sqlstore", "INFO", true))
+	}
 	if err != nil {
 		log.Fatalf("Failed to create SQL store: %v", err)
 	}
