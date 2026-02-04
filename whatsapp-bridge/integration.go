@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"sync"
 
 	"whatsapp-client/config"
 	"whatsapp-client/domain"
@@ -15,6 +17,21 @@ import (
 
 	"go.mau.fi/whatsmeow"
 )
+
+var csvUpdateLocks sync.Map
+
+func csvUpdateLockForPath(path string) *sync.Mutex {
+	if path == "" {
+		m := &sync.Mutex{}
+		return m
+	}
+	if v, ok := csvUpdateLocks.Load(path); ok {
+		return v.(*sync.Mutex)
+	}
+	m := &sync.Mutex{}
+	actual, _ := csvUpdateLocks.LoadOrStore(path, m)
+	return actual.(*sync.Mutex)
+}
 
 // ComponentsBundle holds all initialized services and handlers
 type ComponentsBundle struct {
@@ -112,6 +129,26 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar")
 
+	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva/update/adhay",
+		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeEkadashiBhagavat)))
+	log.Println("🚦 Registered: POST /api/v2/ekadashi-bhagavat-seva/update/adhay")
+
+	http.HandleFunc("/api/v2/durga-paath/update/adhay",
+		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeDurgaPaath)))
+	log.Println("🚦 Registered: POST /api/v2/durga-paath/update/adhay")
+
+	http.HandleFunc("/api/v2/saptahik-swami-seva/update/adhay",
+		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeSaptahikSwami)))
+	log.Println("🚦 Registered: POST /api/v2/saptahik-swami-seva/update/adhay")
+
+	http.HandleFunc("/api/v2/malhari/update/adhay",
+		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeMalhari)))
+	log.Println("🚦 Registered: POST /api/v2/malhari/update/adhay")
+
+	http.HandleFunc("/api/v2/darbar/update/adhay",
+		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeDarbar)))
+	log.Println("🚦 Registered: POST /api/v2/darbar/update/adhay")
+
 	// Individual Reminder Endpoints (send private messages)
 	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva/send-reminders",
 		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeEkadashiBhagavat)))
@@ -174,4 +211,120 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 		json.NewEncoder(wr).Encode(response)
 	}))
 
+}
+
+func handleUpdateAdhyayCSV(bundle *ComponentsBundle, sevaType domain.SevaType) http.HandlerFunc {
+	type request struct {
+		GroupNo int    `json:"group_no"`
+		GroupNo2 int   `json:"groupNo"`
+		Op      string `json:"op"`
+		Op2     string `json:"operation"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req request
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid json", http.StatusBadRequest)
+			return
+		}
+		groupNo := req.GroupNo
+		if groupNo == 0 {
+			groupNo = req.GroupNo2
+		}
+		op := strings.TrimSpace(req.Op)
+		if op == "" {
+			op = strings.TrimSpace(req.Op2)
+		}
+		op = strings.ToUpper(op)
+
+		if groupNo <= 0 {
+			http.Error(w, "valid group_no is required", http.StatusBadRequest)
+			return
+		}
+		if op != "INCRE" && op != "DCRE" {
+			http.Error(w, "op must be INCRE or DCRE", http.StatusBadRequest)
+			return
+		}
+
+		gl, ok := bundle.Config.Groups[string(sevaType)]
+		if !ok {
+			http.Error(w, "seva_type not found", http.StatusNotFound)
+			return
+		}
+
+		var csvPath string
+		maxAdhyas := 0
+		found := false
+		for _, g := range gl {
+			if g.Number == groupNo {
+				csvPath = strings.TrimSpace(g.CSVPath)
+				maxAdhyas = g.MaxAdhyas
+				found = true
+				break
+			}
+		}
+		if !found {
+			http.Error(w, "group not found", http.StatusNotFound)
+			return
+		}
+		if csvPath == "" {
+			http.Error(w, "group csv_path is empty", http.StatusInternalServerError)
+			return
+		}
+		if maxAdhyas <= 0 {
+			maxAdhyas = 0
+		}
+
+		m := csvUpdateLockForPath(csvPath)
+		m.Lock()
+		defer m.Unlock()
+
+		csvRepo := repository.NewCSVRepository()
+		members, err := csvRepo.ReadMembers(csvPath)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to read csv: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if len(members) == 0 {
+			http.Error(w, "no members found in csv", http.StatusBadRequest)
+			return
+		}
+
+		updated := make([]domain.Member, len(members))
+		for i, member := range members {
+			newAdhyay := member.AdhyayNo
+			switch op {
+			case "INCRE":
+				newAdhyay = newAdhyay + 1
+				if maxAdhyas > 0 && newAdhyay > maxAdhyas {
+					newAdhyay = 1
+				}
+			case "DCRE":
+				newAdhyay = newAdhyay - 1
+				if maxAdhyas > 0 && newAdhyay < 1 {
+					newAdhyay = maxAdhyas
+				}
+			}
+			updated[i] = member
+			updated[i].AdhyayNo = newAdhyay
+		}
+
+		if err := csvRepo.WriteMembers(csvPath, updated, groupNo); err != nil {
+			http.Error(w, fmt.Sprintf("failed to write csv: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"success":  true,
+			"seva_type": string(sevaType),
+			"group_no": groupNo,
+			"op":       op,
+			"members":  len(updated),
+		})
+	}
 }
