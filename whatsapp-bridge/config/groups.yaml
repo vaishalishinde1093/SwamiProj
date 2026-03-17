@@ -310,6 +310,12 @@ groups:
       csv_path: "Darbar/durga_paath_group_20.csv"
       max_adhyas: 13
       max_poll_size: 12
+    - number: 21
+      jid: "@g.us"
+      name: "दरबार - 21 श्री दुर्गा सप्तशती"
+      csv_path: "Darbar/durga_paath_group_21.csv"
+      max_adhyas: 13
+      max_poll_size: 12
     - number: 95
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST Darbar"
@@ -372,4 +378,55 @@ groups:
       name: "No BS now, get it - TEST Malhari"
       csv_path: "Malhari/test_group.csv"
       max_adhyas: 14
+      max_poll_size: 12
+
+  # Chaitra Navratri Paath Groups (7 groups, max adhyas: 13)
+  chaitra_navratri:
+    - number: 1
+      jid: "120363408090248644@g.us"
+      name: "चैत्र नवरात्र पाठ - 1"
+      csv_path: "Navratri/navratri_paath_group_1.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 2
+      jid: "120363425536807676@g.us"
+      name: "चैत्र नवरात्र पाठ - 2"
+      csv_path: "Navratri/navratri_paath_group_2.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 3
+      jid: "120363407814208169@g.us"
+      name: "चैत्र नवरात्र पाठ - 3"
+      csv_path: "Navratri/navratri_paath_group_3.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 4
+      jid: "120363424562684535@g.us"
+      name: "चैत्र नवरात्र पाठ - 4"
+      csv_path: "Navratri/navratri_paath_group_4.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 5
+      jid: "120363426313218992@g.us"
+      name: "चैत्र नवरात्र पाठ - 5"
+      csv_path: "Navratri/navratri_paath_group_5.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 6
+      jid: "120363408362930237@g.us"
+      name: "चैत्र नवरात्र पाठ - 6"
+      csv_path: "Navratri/navratri_paath_group_6.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 7
+      jid: "120363427227391178@g.us"
+      name: "चैत्र नवरात्र पाठ - 7"
+      csv_path: "Navratri/navratri_paath_group_7.csv"
+      max_adhyas: 13
+      max_poll_size: 12
+    - number: 99
+      jid: "919886158097-1416801123@g.us"
+      name: "No BS now, get it - TEST Navratri"
+      csv_path: "Navratri/test_group.csv"
+      max_adhyas: 13
       max_poll_size: 12

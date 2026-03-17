@@ -42,6 +42,34 @@ func (s *PostgresMemberStore) EnsureSchema(ctx context.Context) error {
 	return nil
 }
 
+func (s *PostgresMemberStore) GroupIsInitialized(sevaType domain.SevaType, groupNo int) (bool, error) {
+	ctx := context.Background()
+
+	var exists bool
+	if err := s.db.QueryRowContext(
+		ctx,
+		`SELECT EXISTS(SELECT 1 FROM group_member_versions WHERE seva_type=$1 AND group_no=$2)`,
+		string(sevaType),
+		groupNo,
+	).Scan(&exists); err != nil {
+		return false, err
+	}
+	if exists {
+		return true, nil
+	}
+
+	if err := s.db.QueryRowContext(
+		ctx,
+		`SELECT EXISTS(SELECT 1 FROM group_members WHERE seva_type=$1 AND group_no=$2)`,
+		string(sevaType),
+		groupNo,
+	).Scan(&exists); err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 func (s *PostgresMemberStore) GetGroupMembers(sevaType domain.SevaType, groupNo int) ([]domain.Member, int64, error) {
 	ctx := context.Background()
 	var version int64

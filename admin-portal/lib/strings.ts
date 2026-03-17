@@ -133,6 +133,8 @@ export function sevaTypeLabel(sevaType: string): string {
       return "मल्हारी";
     case "darbar":
       return "दरबार";
+    case "chaitra_navratri":
+      return "चैत्र नवरात्र पाठ";
     default:
       return sevaType;
   }

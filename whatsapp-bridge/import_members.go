@@ -34,6 +34,15 @@ func importMembersFromCSVToPostgres(configPath string) error {
 
 	for sevaType, gl := range cfg.Groups {
 		for _, g := range gl {
+			initialized, err := store.GroupIsInitialized(domain.SevaType(sevaType), g.Number)
+			if err != nil {
+				return fmt.Errorf("failed to check existing data for %s group %d: %w", sevaType, g.Number, err)
+			}
+			if initialized {
+				log.Printf("Skipping import for %s group %d: already initialized", sevaType, g.Number)
+				continue
+			}
+
 			members, err := csvRepo.ReadMembers(g.CSVPath)
 			if err != nil {
 				return fmt.Errorf("failed to read csv for %s group %d (%s): %w", sevaType, g.Number, g.CSVPath, err)

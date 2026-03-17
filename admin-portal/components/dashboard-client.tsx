@@ -21,6 +21,7 @@ function endpointFor(action: SevaAction): string {
     if (st === "saptahik_swami") return "/api/v2/saptahik-swami-seva";
     if (st === "malhari") return "/api/v2/malhari";
     if (st === "darbar") return "/api/v2/darbar";
+    if (st === "chaitra_navratri") return "/api/v2/chaitra-navratri";
   }
   if (action.kind === "remind") {
     if (st === "ekadashi_bhagavat") return "/api/v2/ekadashi-bhagavat-seva/send-reminders";
@@ -28,6 +29,7 @@ function endpointFor(action: SevaAction): string {
     if (st === "saptahik_swami") return "/api/v2/saptahik-swami-seva/send-reminders";
     if (st === "malhari") return "/api/v2/malhari/send-reminders";
     if (st === "darbar") return "/api/v2/darbar/send-reminders";
+    if (st === "chaitra_navratri") return "/api/v2/chaitra-navratri/send-reminders";
   }
   if (action.kind === "announce") {
     if (st === "ekadashi_bhagavat") return "/api/v2/ekadashi-bhagavat-seva/group-announcement";
@@ -35,6 +37,7 @@ function endpointFor(action: SevaAction): string {
     if (st === "saptahik_swami") return "/api/v2/saptahik-swami-seva/group-announcement";
     if (st === "malhari") return "/api/v2/malhari/group-announcement";
     if (st === "darbar") return "/api/v2/darbar/group-announcement";
+    if (st === "chaitra_navratri") return "/api/v2/chaitra-navratri/group-announcement";
   }
   return "";
 }

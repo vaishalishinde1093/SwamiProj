@@ -16,6 +16,7 @@ const (
 	SevaTypeSaptahikSwami    SevaType = "saptahik_swami"
 	SevaTypeMalhari          SevaType = "malhari"
 	SevaTypeDarbar           SevaType = "darbar"
+	SevaTypeChaitraNavratri  SevaType = "chaitra_navratri"
 )
 
 // SevaGroup represents a seva group configuration

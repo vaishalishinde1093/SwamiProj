@@ -47,7 +47,21 @@ func (ss *SevaService) SendSevaAutomation(sevaType domain.SevaType, groupNo int)
 		return fmt.Errorf("failed to read members: %w", err)
 	}
 	if len(members) == 0 {
-		return fmt.Errorf("no members found in CSV for group %d", groupNo)
+		csvRepo := repository.NewCSVRepository()
+		csvMembers, csvErr := csvRepo.ReadMembers(groupConfig.CSVPath)
+		if csvErr != nil {
+			return fmt.Errorf("failed to read members from csv %s for group %d: %w", groupConfig.CSVPath, groupNo, csvErr)
+		}
+		if len(csvMembers) == 0 {
+			return fmt.Errorf("no members found in CSV %s for group %d", groupConfig.CSVPath, groupNo)
+		}
+
+		newVersion, replaceErr := ss.memberStore.ReplaceGroupMembers(sevaType, groupNo, csvMembers, version)
+		if replaceErr != nil {
+			return fmt.Errorf("failed to initialize group members from csv %s for group %d: %w", groupConfig.CSVPath, groupNo, replaceErr)
+		}
+		version = newVersion
+		members = csvMembers
 	}
 	log.Printf("🚦 Found %d members in CSV.", len(members))
 
@@ -121,7 +135,6 @@ func (ss *SevaService) SendSevaAutomation(sevaType domain.SevaType, groupNo int)
 	return nil
 }
 
-
 func (ss *SevaService) updateMembersWithRotatedAdhyay(sevaType domain.SevaType, groupNo int, expectedVersion int64, members []domain.Member, sevaTypeForMax domain.SevaType) error {
 	// Create a new slice with rotated adhyay numbers
 	maxAdhyay := ss.getMaxAdhyayForSeva(sevaTypeForMax)
@@ -167,6 +180,8 @@ func (ss *SevaService) buildSevaMessage(sevaType domain.SevaType, groupNo int, m
 		return ss.buildSaptahikSwamiMessage(groupNo, members, sevaType)
 	case domain.SevaTypeDarbar:
 		return ss.buildDarbarMessage(groupNo, members, sevaType)
+	case domain.SevaTypeChaitraNavratri:
+		return ss.buildChaitraNavratriMessage(groupNo, members, sevaType)
 	default:
 		return ss.buildGenericMessage(groupNo, members, sevaType)
 	}
@@ -214,8 +229,7 @@ func (ss *SevaService) buildEkadashiBhagavatMessage(groupNo int, members []domai
 श्री गणपती अथर्वशीर्ष
 नंतर आपण आपल्या नावासमोरील जो अंक येईल तो अध्याय क्रमांक खालील प्रमाणे वाचन करायचे आहे. 🙏
 %s
-हे आपले प्रत्येकाचे अध्यायक्रम आहेत. त्याप्रमाणे पहाटे 4 ते संध्याकाळी 4 वाजे पर्यंत आपल्याला ही सेवा करून ग्रुपवर मेसेज टाकणे. शक्यतो ही सेवा कोणीही कोणासाठी करणार नाही पण जास्तच अडचण असेल तर आदल्या दिवशी किंवा सकाळी दहाच्या आत सांगणे म्हणजे ग्रुप वरच एकमेकांना सहकार्य सेवा करता येईल नंतर सेवा होणार नाही. आम्ही संध्याकाळी चार नंतर डायरेक्ट तुमच्या नावाजवळच्या गोलला क्लिक करून देऊ तुम्ही सेवा केलेले असे समजून आम्ही तर निमित्त मात्र राहणार आहोत .पण आपण सर्व या सेवेअंतर्गत भगवंताशी जोडले गेलेलो आहोत .🙏🙏🙏
-संयोजक
+   संयोजक
 मिनाक्षी बागुल 🙏`, groupNo, dayWithDate, ss.buildMemberListWithRotatedAdhyay(members, sevaType))
 
 	return message
@@ -234,7 +248,7 @@ func (ss *SevaService) buildSaptahikSwamiMessage(groupNo int, members []domain.M
 शेवटी आपल्याला तारक मंत्र म्हणायचं आहे.
 पहाटे 5 ते सायंकाळी 6 वाजेपर्यंत  आपण ही सेवा लवकरात लवकर पूर्ण करून सायंकाळी. 6च्या आत मेसेज टाकून देणे अनिवार्य आहे.🙏
 %s
-प्रत्येकाने आपले नाव लगेच बघून घ्या .काही चुकलं असेल तर त्वरित मला फोन करावा. काही फारच अपरिहार्य कारणाने कोणी सेवा करू शकत नसेल तर आधी आपल्या घरातील कोणी व्यक्ती सेवा करत असेल तर त्यांच्याकडून करून घेणे नसेल  तर सकाळीच तसे ग्रुप वर कळवावे .ग्रुप मधील ज्यांना शक्य  असेल त्या सेविकाऱ्यांनी ही सेवा करावी.
+प्रत्येकाने आपले नाव लगेच बघून घ्या .काही चुकलं असल्यास मला फोन करावा. काही फारच अपरिहार्य कारणाने कोणी सेवा करू शकत नसेल तर आधी आपल्या घरातील कोणी व्यक्ती सेवा करत असेल तर त्यांच्याकडून करून घेणे नसेल  तर सकाळीचत तसे ग्रुप वर कळवावे .ग्रुप मधील ज्यांना शक्य असेल त्या सेविकाऱ्यांनी ही सेवा करावी.
    संयोजक 
 मिनाक्षी बागुल 🙏`, groupNo, dayWithDate, memberList)
 	return message
@@ -246,7 +260,7 @@ func (ss *SevaService) buildDarbarMessage(groupNo int, members []domain.Member, 
 	memberList := ss.buildMemberListWithRotatedAdhyay(members, sevaType)
 	message := fmt.Sprintf(`🙏 श्री स्वामी समर्थ🙏
 श्री दुर्गा सप्तशती साप्ताहिक सेवा दरबार क्रमांक - %d
-ठरलेल्या नियमाप्रमाणे आपण ही उपासना केली तरच आईसाहेब आपल्या सर्वांच्या मनोकामना नक्कीच पूर्ण करतील खूप अनमोल सेवा आहे ही.🙏 
+ठरलेल्या नियमाप्रमाणे आपण ही उपासना केली तरच आईसाहेब आपल्या सर्वांच्या मनोकामना नक्कीच पूर्ण करतील.🙏
 नमस्कार सखीनों , आपण ही, सेवा %s ला करायची आहे .प्रत्येकीने आधी गणपती बाप्पाचा स्मरण करून .मग आपल्या गुरूंचे स्मरण करून. स्वामी स्तवन किंवा प्रार्थना वाचावी,
 देही सौभाग्य आरोग्य हे पाच मंत्र ,
 देव्याकवचम ,
@@ -269,8 +283,28 @@ func (ss *SevaService) buildDarbarMessage(groupNo int, members []domain.Member, 
 	return message
 }
 
-// (Add all your other build...Message and support/helper functions here from lines 320-477 of your codebase/screenshots)
-// ...including buildDurgaPaathMessage, buildGenericMessage, and others as in code.
+func (ss *SevaService) buildChaitraNavratriMessage(groupNo int, members []domain.Member, sevaType domain.SevaType) string {
+	memberList := ss.buildMemberListWithRotatedAdhyay(members, sevaType)
+	message := fmt.Sprintf(`🙏 श्री स्वामी समर्थ🙏
+१९ मार्च तर २७ मार्च पर्यंत चैत्र नवरात्र साठी आपण श्री कुलस्वामिनी मातेची उपासना करणार आहोत. श्रीदुर्गा सप्तशतीचे सामुदायिक पाठ साखळी पारायण प्रमाणे  घेणार आहोत. आपल्याला ९  दिवस रोज सिद्ध कुंजिका स्तोत्र, राम रक्षा स्तोत्र, मारुती स्तोत्र, म्हणायचे आहे .आपण सर्वांनी मनापासून पहिल्या दिवशी संकल्प करून देवी मातेची आराधना करायची आहे. आणि नऊ दिवस एकच टाईम फिक्स करायचा आहे. शक्यतो पहाटे 5 तर दुपारी 12 वाजेच्या आत सेवा पूर्ण करा. ज्यानां काही कारणास्तव शक्यच नाही अशा सेविकाऱ्यांनी 3 वाजे पर्यंत  सेवा पूर्ण करायची आहे. कारण रोज नवीन पोल टाकावे लागतील .
+आधी गणपती बाप्पाचा स्मरण करून .मग आपल्या गुरूंचे स्मरण करून. स्वामी स्तवन , प्रार्थना वाचावी,
+देही सौभाग्य आरोग्य हे पाच मंत्र ,
+देव्याकवचम ,
+अर्गलास्तोत्रम् ,
+अथकिलकस्तोत्रम ,
+रात्री सुक्त
+त्यानंतर आपल्या नावापुढील अध्याय वाचणे व (१) माळ नवार्णव मंत्र जप करून सिद्ध कुंजिका स्तोत्र म्हटल्यानंतर क्षमा प्रार्थना करणे. नंतर राम रक्षा स्तोत्र, मारुती स्तोत्र म्हणणे.
+ज्या सेवेकऱ्यांचा अध्याय तेरावा आहे, त्यांनी तेरावा अध्याय वाचल्या नंतर 
+तंत्रोक्त देवीसूक्त,
+प्राधानिक रहस्य,
+विकृतिक रहस्य,
+मूर्ती रहस्य,
+आणि नंतर क्षमा प्रार्थना अशी सेवा करायची आहे . ज्यांचा तेरावा अध्याय आहे त्याच्या साठी सांगते.आपले नऊ दिवसाचे अध्याय क्रमांक रोज पोलमध्ये आपल्या नावाजवळ जो अंक राहील तोच राहणार आहे.
+%s
+   संयोजक 
+मिनाक्षी बागुल 🙏`, memberList)
+	return message
+}
 
 // buildGenericMessage creates a generic seva message (fallback)
 func (ss *SevaService) buildGenericMessage(groupNo int, members []domain.Member, sevaType domain.SevaType) string {
@@ -317,6 +351,8 @@ func getSevaDisplayName(sevaType domain.SevaType) any {
 		return "साप्ताहिक स्वामी सेवा"
 	case domain.SevaTypeDarbar:
 		return "साप्ताहिक दुर्गा सेवा"
+	case domain.SevaTypeChaitraNavratri:
+		return "चैत्र नवरात्र पाठ"
 	case domain.SevaTypeMalhari:
 		return "मल्हारी महात्म सेवा"
 	default:
@@ -389,7 +425,7 @@ func (ss *SevaService) getMaxAdhyayForSeva(sevaType domain.SevaType) int {
 	case domain.SevaTypeSaptahikSwami:
 		// Swami Saptah weekly just use 1
 		return 21
-	case domain.SevaTypeDarbar:
+	case domain.SevaTypeDarbar, domain.SevaTypeChaitraNavratri:
 		// Darbar generic seva (can be 13 or 14)
 		return 13
 	default:

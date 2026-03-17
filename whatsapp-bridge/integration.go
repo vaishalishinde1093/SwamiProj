@@ -129,6 +129,10 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar")
 
+	http.HandleFunc("/api/v2/chaitra-navratri",
+		apiKeyMiddleware(bundle.SevaHandler.HandleSendSeva(domain.SevaTypeChaitraNavratri)))
+	log.Println("🚦 Registered: POST /api/v2/chaitra-navratri")
+
 	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva/update/adhay",
 		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeEkadashiBhagavat)))
 	log.Println("🚦 Registered: POST /api/v2/ekadashi-bhagavat-seva/update/adhay")
@@ -148,6 +152,10 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 	http.HandleFunc("/api/v2/darbar/update/adhay",
 		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar/update/adhay")
+
+	http.HandleFunc("/api/v2/chaitra-navratri/update/adhay",
+		apiKeyMiddleware(handleUpdateAdhyayCSV(bundle, domain.SevaTypeChaitraNavratri)))
+	log.Println("🚦 Registered: POST /api/v2/chaitra-navratri/update/adhay")
 
 	// Individual Reminder Endpoints (send private messages)
 	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva/send-reminders",
@@ -170,6 +178,10 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar/send-reminders")
 
+	http.HandleFunc("/api/v2/chaitra-navratri/send-reminders",
+		apiKeyMiddleware(bundle.ReminderHandler.HandleReminders(domain.SevaTypeChaitraNavratri)))
+	log.Println("🚦 Registered: POST /api/v2/chaitra-navratri/send-reminders")
+
 	// Group Announcement Endpoints (send message to group listing pending members)
 	http.HandleFunc("/api/v2/ekadashi-bhagavat-seva/group-announcement",
 		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeEkadashiBhagavat)))
@@ -190,6 +202,10 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 	http.HandleFunc("/api/v2/darbar/group-announcement",
 		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeDarbar)))
 	log.Println("🚦 Registered: POST /api/v2/darbar/group-announcement")
+
+	http.HandleFunc("/api/v2/chaitra-navratri/group-announcement",
+		apiKeyMiddleware(bundle.ReminderHandler.HandleGroupAnnouncement(domain.SevaTypeChaitraNavratri)))
+	log.Println("🚦 Registered: POST /api/v2/chaitra-navratri/group-announcement")
 
 	log.Println("🚦 All v2 API endpoints registered successfully")
 
@@ -215,10 +231,10 @@ func registerRefactoredHandlers(bundle *ComponentsBundle) {
 
 func handleUpdateAdhyayCSV(bundle *ComponentsBundle, sevaType domain.SevaType) http.HandlerFunc {
 	type request struct {
-		GroupNo int    `json:"group_no"`
-		GroupNo2 int   `json:"groupNo"`
-		Op      string `json:"op"`
-		Op2     string `json:"operation"`
+		GroupNo  int    `json:"group_no"`
+		GroupNo2 int    `json:"groupNo"`
+		Op       string `json:"op"`
+		Op2      string `json:"operation"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -320,11 +336,11 @@ func handleUpdateAdhyayCSV(bundle *ComponentsBundle, sevaType domain.SevaType) h
 		}
 
 		writeJSON(w, http.StatusOK, map[string]any{
-			"success":  true,
+			"success":   true,
 			"seva_type": string(sevaType),
-			"group_no": groupNo,
-			"op":       op,
-			"members":  len(updated),
+			"group_no":  groupNo,
+			"op":        op,
+			"members":   len(updated),
 		})
 	}
 }

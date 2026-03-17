@@ -19,7 +19,7 @@ type ReminderService struct {
 	config       *config.Config
 	messageStore MessageStore
 
-	mu                   sync.Mutex
+	mu                    sync.Mutex
 	completionAnnouncedBy map[string]string
 }
 
@@ -31,10 +31,10 @@ func NewReminderService(
 	msgStore MessageStore,
 ) *ReminderService {
 	return &ReminderService{
-		memberStore:  memberStore,
-		whatsappSvc:  whatsappSvc,
-		config:       cfg,
-		messageStore: msgStore,
+		memberStore:           memberStore,
+		whatsappSvc:           whatsappSvc,
+		config:                cfg,
+		messageStore:          msgStore,
 		completionAnnouncedBy: make(map[string]string),
 	}
 }
@@ -349,6 +349,8 @@ func (rs *ReminderService) getSevaDisplayName(sevaType domain.SevaType) string {
 		return "साप्ताहिक स्वामी"
 	case domain.SevaTypeDarbar:
 		return "साप्ताहिक दुर्गा"
+	case domain.SevaTypeChaitraNavratri:
+		return "चैत्र नवरात्र पाठ"
 	case domain.SevaTypeMalhari:
 		return "मल्हारी महात्म"
 	default:
@@ -437,6 +439,8 @@ func (rs *ReminderService) buildCompletionMessage(sevaType domain.SevaType) stri
 		return "🙏 श्री स्वामी समर्थ🙏\nआजची आपली गुरूवारची साप्ताहिक स्वामी सेवा आपले स्वामी महाराजांच्या कृपाशीर्वादाने व आपल्या सर्वांच्या सहकार्याने पूर्ण झालेली आहे.🙏🙏🙏"
 	case domain.SevaTypeDarbar:
 		return "🙏 उदयोस्तु,  श्रीमहाकाली,महालक्ष्मी ,महासरस्वती, राजराजेश्वरी, आईसाहेब, श्री आंबा माता की जय🙏\n आजची आपली मंगळवारची साप्ताहिक सेवा आई साहेबांच्या कृपा आशीर्वादाने आपल्या सर्वांचे सहकार्य पूर्ण झालेली आहे.🙏🤝😊"
+	case domain.SevaTypeChaitraNavratri:
+		return "🙏 उदयोस्तु,  श्रीमहाकाली,महालक्ष्मी ,महासरस्वती, राजराजेश्वरी, आईसाहेब, श्री आंबा माता की जय🙏\nआजची आपली चैत्र नवरात्र पाठ सेवा आई साहेबांच्या कृपा आशीर्वादाने आपल्या सर्वांच्या सहकार्याने पूर्ण झालेली आहे.🙏🤝😊"
 	case domain.SevaTypeEkadashiBhagavat:
 		return "🙏 श्री स्वामी समर्थ🙏\n🙏ओम नमो भगवते वासुदेवाय 🙏\nआजची आपली एकादशीची सेवा श्री स्वामी महाराजांच्या कृपा आशीर्वादाने व आपल्या सर्वांच्या सहकार्याने पूर्ण झालेली आहे.💐🤝🙏👌👍🙏"
 	default:
