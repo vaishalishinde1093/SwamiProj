@@ -13,6 +13,11 @@ type SevaAction =
   | { kind: "remind"; sevaType: string; groupNo: number }
   | { kind: "announce"; sevaType: string; groupNo: number };
 
+type BulkSevaAction =
+  | { kind: "send"; sevaType: string }
+  | { kind: "remind"; sevaType: string }
+  | { kind: "announce"; sevaType: string };
+
 function endpointFor(action: SevaAction): string {
   const st = action.sevaType;
   if (action.kind === "send") {
@@ -50,6 +55,7 @@ export function DashboardClient() {
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [expandedSevaType, setExpandedSevaType] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [progressOpen, setProgressOpen] = useState(false);
   const [progressTitle, setProgressTitle] = useState("");
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
@@ -109,11 +115,15 @@ export function DashboardClient() {
     setToast(null);
 
     try {
-      const body: any = { group_no: action.groupNo };
-      const resp = await api<any>(ep, { method: "POST", body: JSON.stringify(body) });
-      setToast(resp?.message ? String(resp.message) : t("dashboard.actionDone"));
+      const body = { group_no: action.groupNo };
+      const resp = await api<unknown>(ep, { method: "POST", body: JSON.stringify(body) });
+
+      const message =
+        resp && typeof resp === "object" && "message" in resp ? String((resp as { message?: unknown }).message ?? "") : "";
+
+      setToast(message ? message : t("dashboard.actionDone"));
       setProgressStatus("success");
-      setProgressMessage(resp?.message ? String(resp.message) : t("dashboard.actionDone"));
+      setProgressMessage(message ? message : t("dashboard.actionDone"));
     } catch (e) {
       setToast(e instanceof Error ? e.message : t("dashboard.actionFailed"));
       setProgressStatus("error");
@@ -121,6 +131,41 @@ export function DashboardClient() {
     } finally {
       setBusy(null);
     }
+  }
+
+  async function runBulk(action: BulkSevaAction, groupNumbers: number[]) {
+    const kindLabel =
+      action.kind === "send" ? t("dashboard.pollMessage") : action.kind === "remind" ? t("dashboard.remind") : t("dashboard.announce");
+    setProgressTitle(`${kindLabel} - All Groups`);
+    setProgressMessage(`${sevaTypeLabel(action.sevaType)} · ${groupNumbers.length} groups`);
+    setProgressStatus("loading");
+    setProgressOpen(true);
+
+    const bulkKey = `bulk:${action.kind}:${action.sevaType}`;
+    setBulkBusy(bulkKey);
+    setToast(null);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const groupNo of groupNumbers) {
+      const ep = endpointFor({ ...action, groupNo });
+      if (!ep) continue;
+
+      try {
+        const body = { group_no: groupNo };
+        await api<unknown>(ep, { method: "POST", body: JSON.stringify(body) });
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    setBulkBusy(null);
+    const resultMsg = `Completed: ${successCount} succeeded, ${failCount} failed`;
+    setToast(resultMsg);
+    setProgressStatus(failCount === 0 ? "success" : "error");
+    setProgressMessage(resultMsg);
   }
 
   function toggleSevaType(sevaType: string) {
@@ -167,22 +212,66 @@ export function DashboardClient() {
               key={sevaType}
               className="rounded-2xl bg-panel/60 border border-black/10 shadow-soft overflow-hidden"
             >
-              <button
-                type="button"
-                onClick={() => toggleSevaType(sevaType)}
-                className="w-full text-left px-5 py-4 hover:bg-black/10 transition cursor-pointer"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-xs text-muted">{t("dashboard.sevaType")}</div>
-                    <div className="font-semibold tracking-tight">{sevaTypeLabel(sevaType)}</div>
-                    <div className="mt-0.5 text-xs text-muted">
-                      {gl.length} {t("dashboard.group")}
+              <div className="px-5 py-4 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => toggleSevaType(sevaType)}
+                  className="w-full text-left hover:bg-black/10 transition cursor-pointer rounded-lg p-2 -m-2"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs text-muted">{t("dashboard.sevaType")}</div>
+                      <div className="font-semibold tracking-tight">{sevaTypeLabel(sevaType)}</div>
+                      <div className="mt-0.5 text-xs text-muted">
+                        {gl.length} {t("dashboard.group")}
+                      </div>
                     </div>
+                    <div className="text-sm text-muted font-semibold">{expandedSevaType === sevaType ? "−" : "+"}</div>
                   </div>
-                  <div className="text-sm text-muted font-semibold">{expandedSevaType === sevaType ? "−" : "+"}</div>
+                </button>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => runBulk({ kind: "send", sevaType }, gl.map((g) => g.number))}
+                    disabled={busy !== null || bulkBusy !== null}
+                    className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-xs font-semibold hover:bg-brand/90 transition disabled:opacity-60"
+                  >
+                    {bulkBusy === `bulk:send:${sevaType}` ? (
+                      <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <DeepakIcon className="h-3.5 w-3.5" />
+                    )}
+                    {t("dashboard.sendSevaToAll")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => runBulk({ kind: "remind", sevaType }, gl.map((g) => g.number))}
+                    disabled={busy !== null || bulkBusy !== null}
+                    className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-xs font-semibold hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
+                  >
+                    {bulkBusy === `bulk:remind:${sevaType}` ? (
+                      <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <GhantaIcon className="h-3.5 w-3.5" />
+                    )}
+                    {t("dashboard.remindAll")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => runBulk({ kind: "announce", sevaType }, gl.map((g) => g.number))}
+                    disabled={busy !== null || bulkBusy !== null}
+                    className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-xs font-semibold hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
+                  >
+                    {bulkBusy === `bulk:announce:${sevaType}` ? (
+                      <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <MandirIcon className="h-3.5 w-3.5" />
+                    )}
+                    {t("dashboard.announceToAll")}
+                  </button>
                 </div>
-              </button>
+              </div>
 
               {expandedSevaType === sevaType ? (
                 <div className="p-2 border-t border-black/10 bg-black/5">
@@ -206,7 +295,7 @@ export function DashboardClient() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => run({ kind: "send", sevaType: g.seva_type, groupNo: g.number })}
-                          disabled={busy !== null}
+                          disabled={busy !== null || bulkBusy !== null}
                           className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-3 text-sm font-semibold hover:bg-brand/90 transition disabled:opacity-60"
                         >
                           {busy === `send:${g.seva_type}:${g.number}` ? (
@@ -218,7 +307,7 @@ export function DashboardClient() {
                         </button>
                         <button
                           onClick={() => run({ kind: "remind", sevaType: g.seva_type, groupNo: g.number })}
-                          disabled={busy !== null}
+                          disabled={busy !== null || bulkBusy !== null}
                           className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-4 py-3 text-sm font-semibold hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
                         >
                           {busy === `remind:${g.seva_type}:${g.number}` ? (
@@ -230,7 +319,7 @@ export function DashboardClient() {
                         </button>
                         <button
                           onClick={() => run({ kind: "announce", sevaType: g.seva_type, groupNo: g.number })}
-                          disabled={busy !== null}
+                          disabled={busy !== null || bulkBusy !== null}
                           className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-4 py-3 text-sm font-semibold hover:bg-black/10 border border-black/10 transition disabled:opacity-60"
                         >
                           {busy === `announce:${g.seva_type}:${g.number}` ? (

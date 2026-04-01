@@ -45,7 +45,10 @@ export const mr = {
     pollMessage: "सेवा पाठवा",
     remind: "पर्सनल नोटिफिकेशन पाठवा",
     announce: "ग्रुप वर राहिलेले सेवेकरी नोंदवा",
-    editMembers: "सदस्य संपादित करा"
+    editMembers: "सदस्य संपादित करा",
+    sendSevaToAll: "सर्व गटांना सेवा पाठवा",
+    remindAll: "सर्वांना पर्सनल नोटिफिकेशन पाठवा",
+    announceToAll: "सर्व गटांवर राहिलेले सेवेकरी नोंदवा"
   },
   groups: {
     kicker: "संरचना",
