@@ -307,7 +307,7 @@ groups:
     - number: 20
       jid: "120363405464299899@g.us"
       name: "दरबार - 20 श्री दुर्गा सप्तशती"
-      csv_path: "Darbar/durga_paath_group_20.csv
+      csv_path: "Darbar/durga_paath_group_20.csv"
       max_adhyas: 13
       max_poll_size: 12
     - number: 21
