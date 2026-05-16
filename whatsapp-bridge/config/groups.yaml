@@ -182,6 +182,12 @@ groups:
       csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_18.csv"
       max_adhyas: 21
       max_poll_size: 12
+    - number: 19
+      jid: "120363427150684048@g.us"
+      name: "संघ - 19 साप्ताहिक स्वामी सेवा"
+      csv_path: "SaptahikSwamiSeva/saptahik_swami_seva_group_19.csv"
+      max_adhyas: 21
+      max_poll_size: 12
     - number: 99
       jid: "919886158097-1416801123@g.us"
       name: "No BS now, get it - TEST GROUP"
