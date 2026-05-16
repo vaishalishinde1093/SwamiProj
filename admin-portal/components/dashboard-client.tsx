@@ -150,7 +150,7 @@ export function DashboardClient() {
 
     for (const groupNo of groupNumbers) {
       const ep = endpointFor({ ...action, groupNo });
-      if (!ep) continue;
+      if (!ep || groupNo > 90) continue;
 
       try {
         const body = { group_no: groupNo };
