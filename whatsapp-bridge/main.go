@@ -331,6 +331,15 @@ func sendWhatsAppPoll(client *whatsmeow.Client, messageStore *MessageStore, reci
 		return false, "Not connected to WhatsApp"
 	}
 
+	// if we already send the poll for today, return
+	isPollSent, err1 := messageStore.IsPollAlreadySentForToday(pollName)
+	if err1 != nil {
+		return false, fmt.Sprintf("Error checking if poll was sent today: %v", err1)
+	}
+	if isPollSent {
+		return false, "Poll already sent for today"
+	}
+
 	// Create JID for recipient
 	var recipientJID types.JID
 	var err error
@@ -718,6 +727,30 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 
 func extractMediaInfo(message *waE2E.Message) (mediaType string, fileName string, url string, mediaKey []byte, fileSHA256 []byte, fileEncSHA256 []byte, fileLength uint64) {
 	return "", "", "", nil, nil, nil, 0
+}
+
+func (store *MessageStore) IsPollAlreadySentForToday(pollName string) (bool, error) {
+    // Get today's date at midnight (start of day) in UTC
+    now := time.Now().UTC()
+    todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+    tomorrowStart := todayStart.Add(24 * time.Hour)
+    
+    // Query to check if poll exists with the given name today
+    query := `
+        SELECT EXISTS (
+            SELECT 1 FROM poll_data 
+            WHERE poll_name = $1 
+            AND timestamp >= $2 
+            AND timestamp < $3
+        )`
+    
+    var exists bool
+    err := store.db.QueryRow(query, pollName, todayStart, tomorrowStart).Scan(&exists)
+    if err != nil {
+        return false, fmt.Errorf("failed to check if poll was sent today: %w", err)
+    }
+    
+    return exists, nil
 }
 
 // StorePollData stores poll creation information (poll ID, name, options)
