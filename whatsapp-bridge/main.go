@@ -730,27 +730,23 @@ func extractMediaInfo(message *waE2E.Message) (mediaType string, fileName string
 }
 
 func (store *MessageStore) IsPollAlreadySentForToday(pollName string) (bool, error) {
-    // Get today's date at midnight (start of day) in UTC
-    now := time.Now().UTC()
-    todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-    tomorrowStart := todayStart.Add(24 * time.Hour)
-    
-    // Query to check if poll exists with the given name today
-    query := `
-        SELECT EXISTS (
-            SELECT 1 FROM poll_data 
-            WHERE poll_name = $1 
-            AND timestamp >= $2 
-            AND timestamp < $3
-        )`
-    
-    var exists bool
-    err := store.db.QueryRow(query, pollName, todayStart, tomorrowStart).Scan(&exists)
-    if err != nil {
-        return false, fmt.Errorf("failed to check if poll was sent today: %w", err)
-    }
-    
-    return exists, nil
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM poll_data
+			WHERE poll_name = $1
+			  AND "timestamp" >= date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL '1 day'
+			  AND "timestamp" <  date_trunc('day', CURRENT_TIMESTAMP) + INTERVAL '1 day'
+		)
+	`
+
+	var exists bool
+	err := store.db.QueryRow(query, pollName).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check poll existence failed: %w", err)
+	}
+
+	return exists, nil
 }
 
 // StorePollData stores poll creation information (poll ID, name, options)
