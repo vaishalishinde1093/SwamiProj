@@ -332,13 +332,13 @@ func sendWhatsAppPoll(client *whatsmeow.Client, messageStore *MessageStore, reci
 	}
 
 	// if we already send the poll for today, return
-	isPollSent, err1 := messageStore.IsPollAlreadySentForToday(pollName)
+	/*isPollSent, err1 := messageStore.IsPollAlreadySentForToday(pollName)
 	if err1 != nil {
 		return false, fmt.Sprintf("Error checking if poll was sent today: %v", err1)
 	}
 	if isPollSent {
 		return false, "Poll already sent for today"
-	}
+	}*/
 
 	// Create JID for recipient
 	var recipientJID types.JID
