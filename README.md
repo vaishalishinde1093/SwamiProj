@@ -2,6 +2,8 @@
 
 A comprehensive WhatsApp-based seva management system for religious organizations, featuring automated group management, poll-based seva scheduling, and an admin portal for oversight.
 
+## Project URL : https://caring-truth-production.up.railway.app/
+
 ## Overview
 
 This project consists of two main components:
@@ -311,6 +313,12 @@ npm test
 - **TailwindCSS** - Styling
 - **Lucide React** - Icons
 
+## Screenshots
+
+![Admin Portal Seva Dashboard](seva-dashboard.png)
+![Whatsapp Group Configuration](group-config.png)
+![Whatsapp Members Configuration](members-dasboard.png)
+
 ## Troubleshooting
 
 ### QR Code Not Displaying
@@ -327,6 +335,7 @@ npm test
 - Verify `API_KEY` environment variable is set
 - Include header: `Authorization: Bearer your-api-key`
 - Check for typos in the API key
+
 
 ## Contributing
 
